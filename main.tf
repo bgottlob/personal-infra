@@ -15,6 +15,9 @@ terraform {
   }
 }
 
+provider "kubernetes" {}
+provider "helm" {}
+
 resource "linode_lke_cluster" "personal" {
   label = "bgottlob-personal"
   k8s_version = "1.24"
