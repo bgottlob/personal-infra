@@ -26,6 +26,14 @@ resource "linode_domain_record" "bgottlob_miniflux" {
   depends_on = [linode_lke_cluster.personal]
   domain_id = linode_domain.bgottlob.id
   record_type = "A"
+  target = local.ingress_external_ip
   name = "miniflux"
+}
+
+resource "linode_domain_record" "bgottlob_registry" {
+  depends_on = [linode_lke_cluster.personal]
+  domain_id = linode_domain.bgottlob.id
+  record_type = "A"
+  name = "registry"
   target = local.ingress_external_ip
 }
