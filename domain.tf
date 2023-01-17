@@ -13,3 +13,11 @@ resource "linode_domain_record" "bgottlob_blog" {
   name = "blog"
   target = local.ingress_external_ip
 }
+
+resource "linode_domain_record" "bgottlob_wallabag" {
+  depends_on = [linode_lke_cluster.personal]
+  domain_id = linode_domain.bgottlob.id
+  record_type = "A"
+  name = "wallabag"
+  target = local.ingress_external_ip
+}
