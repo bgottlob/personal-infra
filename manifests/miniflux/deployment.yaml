@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: miniflux
+  namespace: miniflux
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: miniflux
+  template:
+    metadata:
+      labels:
+        app: miniflux
+    spec:
+      containers:
+      - name: miniflux
+        image: miniflux/miniflux:2.0.41
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: miniflux-postgres
+              key: database_url
+        - name: RUN_MIGRATIONS
+          value: "1"
+        - name: CREATE_ADMIN
+          value: "1"
+        - name: ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: miniflux-admin
+              key: username
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: miniflux-admin
+              key: password

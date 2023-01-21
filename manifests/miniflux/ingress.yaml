@@ -1,0 +1,38 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: miniflux
+  namespace: miniflux
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - miniflux.bgottlob.com
+    secretName: miniflux-tls
+  rules:
+  - host: miniflux.bgottlob.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: miniflux
+            port:
+              number: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: miniflux-tls
+  namespace: miniflux
+spec:
+  secretName: miniflux-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - miniflux.bgottlob.com
