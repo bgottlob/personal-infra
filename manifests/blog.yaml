@@ -16,10 +16,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - blog.bgottlob.com
+    - bgottlob.com
     secretName: blog-tls
   rules:
-  - host: blog.bgottlob.com
+  - host: bgottlob.com
     http:
       paths:
       - pathType: Prefix
@@ -41,7 +41,7 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-  - blog.bgottlob.com
+  - bgottlob.com
 ---
 apiVersion: v1
 kind: Service
@@ -72,7 +72,9 @@ spec:
         app: blog
     spec:
       containers:
-      - name: nginx-demo
-        image: nginxdemos/hello
+      - name: blog
+        image: registry.bgottlob.com/blog:0
         ports:
         - containerPort: 80
+      imagePullSecrets:
+      - name: registry-creds
