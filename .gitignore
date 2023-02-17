@@ -1,4 +1,5 @@
-.env*
+.env
+.direnv
 .terraform*
 *.tfstate*
 *-kubeconfig.yaml
