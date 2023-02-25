@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: taskd
+  namespace: taskd
+spec:
+  selector:
+    matchLabels:
+      app: taskd
+  serviceName: taskd
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: taskd
+    spec:
+      imagePullSecrets:
+      - name: registry-creds
+      containers:
+      - name: taskd
+        image: registry.bgottlob.com/taskd:latest
+        imagePullPolicy: Always
+        env:
+        - name: TASKDDATA
+          value: /data/taskd
+        - name: CN
+          value: taskd.bgottlob.com
+        - name: CERT_ORGANIZATION
+          value: "${TASKD_CERT_ORGANIZATION}"
+        - name: CERT_COUNTRY
+          value: "${TASKD_CERT_COUNTRY}"
+        - name: CERT_STATE
+          value: "${TASKD_CERT_STATE}"
+        - name: CERT_LOCALITY
+          value: "${TASKD_CERT_LOCALITY}"
+        - name: USER_ORG
+          value: "${TASKD_USER_ORG}"
+        - name: USER_FIRST_NAME
+          value: "${TASKD_USER_FIRST_NAME}"
+        - name: USER_LAST_NAME
+          value: "${TASKD_USER_LAST_NAME}"
+        volumeMounts:
+        - name: data
+          mountPath: /data/taskd
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: linode-block-storage-retain
+      resources:
+        requests:
+          storage: 1Gi
