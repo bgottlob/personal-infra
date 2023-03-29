@@ -73,7 +73,8 @@ spec:
     spec:
       containers:
       - name: blog
-        image: registry.bgottlob.com/blog:0
+        image: registry.bgottlob.com/blog:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
       imagePullSecrets:
