@@ -48,3 +48,11 @@ resource "linode_domain_record" "bgottlob_taskd" {
   name = "taskd"
   target = data.external.cluster_node_external_ip.result.address
 }
+
+resource "linode_domain_record" "bgottlob_rmfakecloud" {
+  depends_on = [linode_lke_cluster.personal]
+  domain_id = linode_domain.bgottlob.id
+  record_type = "A"
+  name = "rmfakecloud"
+  target = local.ingress_external_ip
+}

@@ -1,0 +1,87 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rmfakecloud
+  labels:
+    name: rmfakecloud
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rmfakecloud
+  namespace: rmfakecloud
+spec:
+  selector:
+    matchLabels:
+      app: rmfakecloud
+  serviceName: rmfakecloud
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rmfakecloud
+    spec:
+      containers:
+      - name: rmfakecloud
+        image: ddvk/rmfakecloud:0.0.14
+        imagePullPolicy: Always
+        env:
+        - name: DATADIR
+          value: /data/rmfakecloud
+        - name: STORAGE_URL
+          value: "https://rmfakecloud.bgottlob.com"
+        - name: PORT
+          value: "3000"
+        volumeMounts:
+        - name: data
+          mountPath: /data/rmfakecloud
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: linode-block-storage-retain
+      resources:
+        requests:
+          storage: 15Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rmfakecloud
+  namespace: rmfakecloud
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 300m
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - rmfakecloud.bgottlob.com
+    secretName: rmfakecloud-tls
+  rules:
+  - host: rmfakecloud.bgottlob.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: rmfakecloud
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rmfakecloud
+  namespace: rmfakecloud
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: rmfakecloud
