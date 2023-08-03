@@ -30,7 +30,7 @@ spec:
         - name: DATADIR
           value: /data/rmfakecloud
         - name: STORAGE_URL
-          value: "https://rmfakecloud.bgottlob.com"
+          value: "https://remarkable.bgottlob.com"
         - name: PORT
           value: "3000"
         volumeMounts:
@@ -59,10 +59,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - rmfakecloud.bgottlob.com
+    - remarkable.bgottlob.com
     secretName: rmfakecloud-tls
   rules:
-  - host: rmfakecloud.bgottlob.com
+  - host: remarkable.bgottlob.com
     http:
       paths:
       - pathType: Prefix
