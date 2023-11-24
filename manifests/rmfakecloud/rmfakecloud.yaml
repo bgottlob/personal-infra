@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: rmfakecloud
-        image: ddvk/rmfakecloud:0.0.14
+        image: ddvk/rmfakecloud:0.0.16
         imagePullPolicy: Always
         env:
         - name: DATADIR
