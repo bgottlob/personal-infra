@@ -20,7 +20,7 @@ provider "helm" {}
 
 resource "linode_lke_cluster" "personal" {
   label = "bgottlob-personal"
-  k8s_version = "1.26"
+  k8s_version = "1.27"
   region = "us-east"
 
   control_plane {
