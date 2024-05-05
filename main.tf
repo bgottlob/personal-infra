@@ -1,3 +1,9 @@
+provider "sops" {}
+
+data "sops_file" "secrets" {
+  source_file = "secrets.yaml"
+}
+
 terraform {
   backend "s3" {
     bucket = "bgottlob-terraform-state"
@@ -12,7 +18,16 @@ terraform {
       source  = "linode/linode"
       version = "1.29.4"
     }
+
+    sops = {
+      source = "carlpett/sops"
+      version = "1.0.0"
+    }
   }
+}
+
+provider "linode" {
+  token = data.sops_file.secrets.data["linode.token"]
 }
 
 provider "kubernetes" {}
