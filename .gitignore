@@ -3,3 +3,6 @@
 .terraform*
 *.tfstate*
 *-kubeconfig.yaml
+
+# jsonnet dependencies
+vendor/
