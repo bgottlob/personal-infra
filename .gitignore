@@ -6,3 +6,6 @@
 
 # jsonnet dependencies
 vendor/
+
+# charts vendored by `tk tool charts`
+charts/

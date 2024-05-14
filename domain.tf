@@ -56,3 +56,11 @@ resource "linode_domain_record" "bgottlob_remarkable" {
   name = "remarkable"
   target = local.ingress_external_ip
 }
+
+resource "linode_domain_record" "bgottlob_planka" {
+  depends_on = [linode_lke_cluster.personal]
+  domain_id = linode_domain.bgottlob.id
+  record_type = "A"
+  name = "planka"
+  target = local.ingress_external_ip
+}
