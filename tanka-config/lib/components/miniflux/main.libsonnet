@@ -25,21 +25,6 @@ local servicePort = k.core.v1.servicePort;
       app: $._config.name,
     },
 
-    local envValue(name, value) = {
-      name: name,
-      value: value,
-    },
-
-    local envValueFromSecret(name, secretName, secretKey) = {
-      name: name,
-      valueFrom: {
-        secretKeyRef: {
-          name: secretName,
-          key: secretKey,
-        },
-      },
-    },
-
     deployment: deployment.new(
                   name=$._config.name,
                   replicas=1,
@@ -50,17 +35,17 @@ local servicePort = k.core.v1.servicePort;
                     )
                     + container.withPorts([containerPort.new('app', $._config.port)])
                     + container.withEnv([
-                      envValueFromSecret('DATABASE_URL', $._config.pgSecret, 'database_url'),
-                      envValue('RUN_MIGRATIONS', '1'),
-                      envValue('CREATE_ADMIN', '1'),
-                      envValueFromSecret('ADMIN_USERNAME', $._config.adminSecret, 'username'),
-                      envValueFromSecret('ADMIN_PASSWORD', $._config.adminSecret, 'password'),
+                      util.envValueFromSecret('DATABASE_URL', $._config.pgSecret, 'database_url'),
+                      util.envValue('RUN_MIGRATIONS', '1'),
+                      util.envValue('CREATE_ADMIN', '1'),
+                      util.envValueFromSecret('ADMIN_USERNAME', $._config.adminSecret, 'username'),
+                      util.envValueFromSecret('ADMIN_PASSWORD', $._config.adminSecret, 'password'),
                     ]),
                   ],
                 )
+                + deployment.metadata.withNamespace(namespace)
                 + deployment.spec.selector.withMatchLabels(matchLabels)
-                + deployment.spec.template.metadata.withLabels(matchLabels)
-                + deployment.metadata.withNamespace(namespace),
+                + deployment.spec.template.metadata.withLabels(matchLabels),
 
     service: service.new(
       name=$._config.name,

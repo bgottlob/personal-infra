@@ -7,7 +7,7 @@ local ingressRule = k.networking.v1.ingressRule;
 local secret = k.core.v1.secret;
 
 {
-  tlsIngress(name, namespace, hostname, issuerName='letsencrypt-prod', issuerKind='ClusterIssuer', ingressClass='nginx'): {
+  tlsIngress(name, namespace, hostname, issuerName='letsencrypt-prod', issuerKind='ClusterIssuer', ingressClass='nginx', servicePort=80): {
     local tlsName = '%s-tls' % name,
 
     ingress: ingress.new(
@@ -28,7 +28,7 @@ local secret = k.core.v1.secret;
                      backend: {
                        service: {
                          name: name,
-                         port: { number: 80 },
+                         port: { number: servicePort },
                        },
                      },
                    }],
@@ -49,5 +49,20 @@ local secret = k.core.v1.secret;
     secret: secret.new(name, {})
             + secret.metadata.withNamespace(namespace)
             + secret.withStringData(stringData),
+  },
+
+  envValue(name, value): {
+    name: name,
+    value: value,
+  },
+
+  envValueFromSecret(name, secretName, secretKey): {
+    name: name,
+    valueFrom: {
+      secretKeyRef: {
+        name: secretName,
+        key: secretKey,
+      },
+    },
   },
 }

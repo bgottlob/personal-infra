@@ -2,10 +2,13 @@
 
 local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
+local wallabag = import 'components/wallabag/main.libsonnet';
 
 local secrets = std.parseYaml(importstr '/dev/stdin');
 
 {
+  local pgHost = 'mypostgres.postgres',
+  local pgPort = 5432,
   local pgUrl = std.format(
     'postgres://%s:%s@mypostgres.postgres',
     [
@@ -27,5 +30,12 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
     adminEmail=secrets.planka.admin.email,
     adminUsername=secrets.planka.admin.username,
     adminPassword=secrets.planka.admin.password,
+  ),
+
+  wallabag: wallabag.all(
+    pgUser=secrets.postgres.super_user.username,
+    pgPassword=secrets.postgres.super_user.password,
+    pgHost=pgHost,
+    pgPort=pgPort,
   )
 }
