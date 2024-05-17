@@ -2,6 +2,7 @@
 
 local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
+local rmfakecloud = import 'components/rmfakecloud/main.libsonnet';
 local wallabag = import 'components/wallabag/main.libsonnet';
 
 local secrets = std.parseYaml(importstr '/dev/stdin');
@@ -32,10 +33,12 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
     adminPassword=secrets.planka.admin.password,
   ),
 
+  rmfakecloud: rmfakecloud.all(),
+
   wallabag: wallabag.all(
     pgUser=secrets.postgres.super_user.username,
     pgPassword=secrets.postgres.super_user.password,
     pgHost=pgHost,
     pgPort=pgPort,
-  )
+  ),
 }
