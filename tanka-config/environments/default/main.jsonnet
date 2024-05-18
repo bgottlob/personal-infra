@@ -4,6 +4,7 @@ local blog = import 'components/blog/main.libsonnet';
 local certManager = import 'components/cert-manager/main.libsonnet';
 local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
+local registry = import 'components/registry/main.libsonnet';
 local rmfakecloud = import 'components/rmfakecloud/main.libsonnet';
 local wallabag = import 'components/wallabag/main.libsonnet';
 
@@ -42,6 +43,14 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
     adminEmail=secrets.planka.admin.email,
     adminUsername=secrets.planka.admin.username,
     adminPassword=secrets.planka.admin.password,
+  ),
+
+  registry: registry.all(
+    s3Keys={
+      accesskey: secrets.registry.bucket.access_key_id,
+      secretkey: secrets.registry.bucket.secret_key,
+    },
+    authHtpasswd=secrets.registry.auth.htpasswd,
   ),
 
   rmfakecloud: rmfakecloud.all(),
