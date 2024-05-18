@@ -51,6 +51,26 @@ local secret = k.core.v1.secret;
             + secret.withStringData(stringData),
   },
 
+  secretDockerRegistry(name, namespace, creds): {
+    local data = {
+      '.dockerconfigjson': std.manifestJsonMinified({
+        auths: {
+          [creds.server]: {
+            username: creds.username,
+            password: creds.password,
+            email: creds.email,
+            auth: std.base64('%s:%s' % [creds.username, creds.password]),
+          },
+        },
+      }),
+    },
+
+    secretDockerRegistry:
+      secret.new(name, {}, type='kubernetes.io/dockerconfigjson')
+      + secret.metadata.withNamespace(namespace)
+      + secret.withStringData(data),
+  },
+
   envValue(name, value): {
     name: name,
     value: value,

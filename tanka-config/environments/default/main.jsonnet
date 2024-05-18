@@ -1,5 +1,6 @@
 // build with sops -d ../secrets.yaml | tk apply environments/secrets
 
+local blog = import 'components/blog/main.libsonnet';
 local certManager = import 'components/cert-manager/main.libsonnet';
 local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
@@ -18,6 +19,10 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
       secrets.postgres.super_user.password,
     ]
   ),
+
+  local registryCreds = secrets.registry.login,
+
+  blog: blog.all(registryCreds=registryCreds),
 
   certManager: certManager.all(
     clusterIssuer='letsencrypt-prod',
