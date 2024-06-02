@@ -41,14 +41,6 @@ data "external" "cluster_node_external_ip" {
   program = ["${path.module}/node_external_ip.sh"]
 }
 
-resource "linode_domain_record" "bgottlob_taskd" {
-  depends_on = [linode_lke_cluster.personal]
-  domain_id = linode_domain.bgottlob.id
-  record_type = "A"
-  name = "taskd"
-  target = data.external.cluster_node_external_ip.result.address
-}
-
 resource "linode_domain_record" "bgottlob_remarkable" {
   depends_on = [linode_lke_cluster.personal]
   domain_id = linode_domain.bgottlob.id
