@@ -31,7 +31,6 @@ provider "linode" {
 }
 
 provider "kubernetes" {}
-provider "helm" {}
 
 resource "linode_lke_cluster" "personal" {
   label = "bgottlob-personal"
