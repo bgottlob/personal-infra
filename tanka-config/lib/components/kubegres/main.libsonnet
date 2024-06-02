@@ -32,7 +32,7 @@ local namespace = k.core.v1.namespace;
         namespace: clusterNamespace,
       },
       spec: {
-        replicas: 3,
+        replicas: 2,
 	image: '%s:%s' % [$._config.postgresImage.name, $._config.postgresImage.tag],
 	database: {
 	  size: $._config.databaseSize
