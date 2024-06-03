@@ -30,8 +30,6 @@ provider "linode" {
   token = data.sops_file.secrets.data["linode.token"]
 }
 
-provider "kubernetes" {}
-
 resource "linode_lke_cluster" "personal" {
   label = "bgottlob-personal"
   k8s_version = "1.27"

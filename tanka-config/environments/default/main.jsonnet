@@ -2,6 +2,7 @@
 
 local blog = import 'components/blog/main.libsonnet';
 local certManager = import 'components/cert-manager/main.libsonnet';
+local externalDNS = import 'components/external-dns/main.libsonnet';
 local ingressNginx = import 'components/ingress-nginx/main.libsonnet';
 local kubegres = import 'components/kubegres/main.libsonnet';
 local linodeCsiDriver = import 'components/linode-csi-driver/main.libsonnet';
@@ -31,6 +32,10 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
   certManager: certManager.all(
     clusterIssuer='letsencrypt-prod',
     ingressClass='nginx',
+  ),
+
+  externalDNS: externalDNS.all(
+    linodeToken=secrets.linode.externalDNSToken,
   ),
 
   ingressNginx: ingressNginx.all(),
