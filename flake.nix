@@ -1,6 +1,6 @@
 {
   description = "A basic flake with a shell";
-  inputs.nixpkgs.url = "nixpkgs/23.05";
+  inputs.nixpkgs.url = "nixpkgs/24.05";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   outputs = { self, nixpkgs, flake-utils }:
@@ -16,10 +16,10 @@
             kubectl
             kubernetes-helm
             openssl
+            opentofu
             postgresql
             sops
             tanka
-            terraform
           ];
         };
       });
