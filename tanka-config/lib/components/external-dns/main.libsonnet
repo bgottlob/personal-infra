@@ -22,11 +22,11 @@ local subject = k.rbac.v1.subject;
     },
   },
 
-  all(namespace='external-dns', domainFilter='bgottlob.com', linodeToken): {
+  all(namespace='external-dns', domainFilter='bgottlob.com', linodeToken, txtOwnerId='bgottlob-k8s', txtPrefix='external-dns-'): {
     local clusterRoleName = $._config.name,
     local serviceAccountName = $._config.name,
     local serviceAccountObj = serviceAccount.new(serviceAccountName)
-                           + serviceAccount.metadata.withNamespace(namespace),
+                              + serviceAccount.metadata.withNamespace(namespace),
     local secretName = 'linode',
 
     namespace: ns.new(namespace),
@@ -70,6 +70,9 @@ local subject = k.rbac.v1.subject;
             '--source=ingress',
             '--domain-filter=' + domainFilter,
             '--provider=linode',
+            '--registry=txt',
+            '--txt-owner-id=' + txtOwnerId,
+            '--txt-prefix=' + txtPrefix,
           ])
           + container.withEnv([
             util.envValueFromSecret('LINODE_TOKEN', secretName, 'token'),
