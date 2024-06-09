@@ -9,6 +9,7 @@ local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
 local registry = import 'components/registry/main.libsonnet';
 local rmfakecloud = import 'components/rmfakecloud/main.libsonnet';
+local velero = import 'components/velero/main.libsonnet';
 local wallabag = import 'components/wallabag/main.libsonnet';
 
 local secrets = std.parseYaml(importstr '/dev/stdin');
@@ -68,6 +69,11 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
   ),
 
   rmfakecloud: rmfakecloud.all(),
+
+  velero: velero.all(
+    accessKeyId=secrets.velero.bucket.access_key_id,
+    secretAccessKey=secrets.velero.bucket.secret_key,
+  ),
 
   wallabag: wallabag.all(
     pgUser=secrets.postgres.super_user.username,

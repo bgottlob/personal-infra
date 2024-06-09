@@ -20,6 +20,7 @@
             postgresql
             sops
             tanka
+            velero
           ];
         };
       });

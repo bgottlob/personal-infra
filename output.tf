@@ -12,3 +12,11 @@ output "registry_access_bucket_keys" {
     secret_key = linode_object_storage_key.registry.secret_key
   }
 }
+
+output "velero_access_bucket_keys" {
+  sensitive = true
+  value = {
+    access_key = linode_object_storage_key.velero.access_key
+    secret_key = linode_object_storage_key.velero.secret_key
+  }
+}

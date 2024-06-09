@@ -31,3 +31,18 @@ resource "linode_object_storage_key" "registry" {
     permissions = "read_write"
   }
 }
+
+resource "linode_object_storage_bucket" "velero" {
+  cluster = data.linode_object_storage_cluster.primary.id
+  label = "bgottlob-velero-backups"
+  acl = "private"
+}
+
+resource "linode_object_storage_key" "velero" {
+  label = "velero-backups-access"
+  bucket_access {
+    cluster = data.linode_object_storage_cluster.primary.id
+    bucket_name = linode_object_storage_bucket.velero.label
+    permissions = "read_write"
+  }
+}
