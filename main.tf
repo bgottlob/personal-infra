@@ -32,7 +32,7 @@ provider "linode" {
 
 resource "linode_lke_cluster" "personal" {
   label = "bgottlob-personal"
-  k8s_version = "1.27"
+  k8s_version = "1.28"
   region = "us-east"
 
   control_plane {
