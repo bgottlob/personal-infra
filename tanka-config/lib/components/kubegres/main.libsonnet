@@ -2,6 +2,7 @@ local k = import 'github.com/grafana/jsonnet-libs/ksonnet-util/kausal.libsonnet'
 local util = import 'util/main.libsonnet';
 
 local namespace = k.core.v1.namespace;
+local pdb = k.policy.v1.podDisruptionBudget;
 
 {
   _config:: {
@@ -33,15 +34,21 @@ local namespace = k.core.v1.namespace;
       },
       spec: {
         replicas: 2,
-	image: '%s:%s' % [$._config.postgresImage.name, $._config.postgresImage.tag],
-	database: {
-	  size: $._config.databaseSize
-	},
+        image: '%s:%s' % [$._config.postgresImage.name, $._config.postgresImage.tag],
+        database: {
+          size: $._config.databaseSize,
+        },
         env: [
           util.envValueFromSecret('POSTGRES_PASSWORD', $._config.passwordSecretName, 'superUserPassword'),
           util.envValueFromSecret('POSTGRES_REPLICATION_PASSWORD', $._config.passwordSecretName, 'replicationUserPassword'),
         ],
       },
     },
+
+    pdb:
+      pdb.new($._config.kubegresName)
+      + pdb.metadata.withNamespace(clusterNamespace)
+      + pdb.spec.selector.withMatchLabels({ app: $._config.kubegresName })
+      + pdb.spec.withMinAvailable(1),
   },
 }
