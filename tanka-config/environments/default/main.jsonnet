@@ -5,6 +5,7 @@ local certManager = import 'components/cert-manager/main.libsonnet';
 local externalDNS = import 'components/external-dns/main.libsonnet';
 local ingressNginx = import 'components/ingress-nginx/main.libsonnet';
 local kubegres = import 'components/kubegres/main.libsonnet';
+local kubePrometheusStack = import 'components/kube-prometheus-stack/main.libsonnet';
 local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
 local registry = import 'components/registry/main.libsonnet';
@@ -44,6 +45,8 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
     superUserPassword=secrets.postgres.super_user.password,
     replicationUserPassword=secrets.postgres.replication.password
   ),
+
+  kubePrometheusStack: kubePrometheusStack.all(),
 
   miniflux: miniflux.deployment() + miniflux.secrets(
     pgUrl=pgUrl,
