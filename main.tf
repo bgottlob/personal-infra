@@ -16,12 +16,12 @@ terraform {
   required_providers {
     linode = {
       source  = "linode/linode"
-      version = "1.29.4"
+      version = "2.34.1"
     }
 
     sops = {
       source = "carlpett/sops"
-      version = "1.0.0"
+      version = "1.1.1"
     }
   }
 }
