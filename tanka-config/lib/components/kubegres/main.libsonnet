@@ -6,13 +6,13 @@ local pdb = k.policy.v1.podDisruptionBudget;
 
 {
   _config:: {
-    kubegresName: 'mypostgres',
-    passwordSecretName: 'mypostgres-secret',
+    kubegresName: 'main-postgres',
+    passwordSecretName: 'main-postgres-secret',
     postgresImage: {
       name: 'postgres',
-      tag: '14.6',
+      tag: '17.4',
     },
-    databaseSize: '200Mi',
+    databaseSize: '8Gi',
   },
 
   all(clusterNamespace='postgres', superUserPassword, replicationUserPassword): {
@@ -20,7 +20,7 @@ local pdb = k.policy.v1.podDisruptionBudget;
 
     namespace: namespace.new(clusterNamespace),
 
-    passwords: util.secretStringData('mypostgres-secret', clusterNamespace, {
+    passwords: util.secretStringData('main-postgres-secret', clusterNamespace, {
       superUserPassword: superUserPassword,
       replicationUserPassword: replicationUserPassword,
     }),

@@ -16,10 +16,10 @@ local wallabag = import 'components/wallabag/main.libsonnet';
 local secrets = std.parseYaml(importstr '/dev/stdin');
 
 {
-  local pgHost = 'mypostgres.postgres',
+  local pgHost = 'main-postgres.postgres',
   local pgPort = 5432,
   local pgUrl = std.format(
-    'postgres://%s:%s@mypostgres.postgres',
+    'postgres://%s:%s@' + pgHost,
     [
       secrets.postgres.super_user.username,
       secrets.postgres.super_user.password,
