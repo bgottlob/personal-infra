@@ -15,7 +15,7 @@ local volumeMount = k.core.v1.volumeMount;
     name: 'registry',
     image: {
       name: 'registry',
-      tag: '2.8.1',
+      tag: '2.8.3',
     },
     containerPort: 5000,
     servicePort: 80,
