@@ -6,5 +6,5 @@ repositories:
   url: http://plankanban.github.io/planka
 requires:
 - chart: planka/planka
-  version: 0.1.29
+  version: 0.2.22
 version: 1
