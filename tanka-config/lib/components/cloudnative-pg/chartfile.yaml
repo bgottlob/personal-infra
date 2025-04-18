@@ -1,0 +1,12 @@
+directory: charts
+repositories:
+- name: stable
+  url: https://charts.helm.sh/stable
+- name: cnpg
+  url: https://cloudnative-pg.github.io/charts
+requires:
+- chart: cnpg/cloudnative-pg
+  version: 0.23.2
+- chart: cnpg/cluster
+  version: 0.3.0
+version: 1

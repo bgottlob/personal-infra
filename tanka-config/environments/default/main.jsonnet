@@ -2,9 +2,9 @@
 
 local blog = import 'components/blog/main.libsonnet';
 local certManager = import 'components/cert-manager/main.libsonnet';
+local cloudnativePg = import 'components/cloudnative-pg/main.libsonnet';
 local externalDNS = import 'components/external-dns/main.libsonnet';
 local ingressNginx = import 'components/ingress-nginx/main.libsonnet';
-local kubegres = import 'components/kubegres/main.libsonnet';
 local kubePrometheusStack = import 'components/kube-prometheus-stack/main.libsonnet';
 local miniflux = import 'components/miniflux/main.libsonnet';
 local planka = import 'components/planka/main.libsonnet';
@@ -16,13 +16,13 @@ local wallabag = import 'components/wallabag/main.libsonnet';
 local secrets = std.parseYaml(importstr '/dev/stdin');
 
 {
-  local pgHost = 'main-postgres.postgres',
+  local pgHost = 'cnpg-database-cluster-rw.cnpg-database',
   local pgPort = 5432,
   local pgUrl = std.format(
     'postgres://%s:%s@' + pgHost,
     [
-      secrets.postgres.super_user.username,
-      secrets.postgres.super_user.password,
+      secrets.postgres.app_user.username,
+      secrets.postgres.app_user.password,
     ]
   ),
 
@@ -35,16 +35,21 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
     ingressClass='nginx',
   ),
 
+  cloudnativePg: cloudnativePg.all(
+    backupBucketAccessKey=secrets.postgres.backup_bucket.access_key_id,
+    backupBucketSecretKey=secrets.postgres.backup_bucket.secret_key,
+    databases=[
+      'miniflux',
+      'planka',
+      'wallabag',
+    ]
+  ),
+
   externalDNS: externalDNS.all(
     linodeToken=secrets.linode.externalDNSToken,
   ),
 
   ingressNginx: ingressNginx.all(),
-
-  kubegres: kubegres.all(
-    superUserPassword=secrets.postgres.super_user.password,
-    replicationUserPassword=secrets.postgres.replication.password
-  ),
 
   kubePrometheusStack: kubePrometheusStack.all(),
 
@@ -79,8 +84,8 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
   ),
 
   wallabag: wallabag.all(
-    pgUser=secrets.postgres.super_user.username,
-    pgPassword=secrets.postgres.super_user.password,
+    pgUser=secrets.postgres.app_user.username,
+    pgPassword=secrets.postgres.app_user.password,
     pgHost=pgHost,
     pgPort=pgPort,
   ),

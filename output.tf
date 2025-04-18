@@ -5,6 +5,14 @@ output "k8s_admin_token" {
   ).users : user.user.token if user.name == "lke${linode_lke_cluster.personal.id}-admin"][0]
 }
 
+output "db_backup_access_bucket_keys" {
+  sensitive = true
+  value = {
+    access_key = linode_object_storage_key.db_backup.access_key
+    secret_key = linode_object_storage_key.db_backup.secret_key
+  }
+}
+
 output "registry_access_bucket_keys" {
   sensitive = true
   value = {
