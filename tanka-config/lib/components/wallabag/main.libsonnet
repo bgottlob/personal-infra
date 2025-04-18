@@ -13,7 +13,7 @@ local servicePort = k.core.v1.servicePort;
     name: 'wallabag',
     image: {
       name: 'wallabag/wallabag',
-      tag: '2.5.4',
+      tag: '2.6.12',
     },
     port: 80, // port the wallabag container listens on
     servicePort: 80,
