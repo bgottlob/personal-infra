@@ -15,7 +15,7 @@ local subject = k.rbac.v1.subject;
     name: 'external-dns',
     image: {
       name: 'registry.k8s.io/external-dns/external-dns',
-      tag: 'v0.14.2',
+      tag: 'v0.15.1',
     },
     matchLabels: {
       app: 'external-dns',
