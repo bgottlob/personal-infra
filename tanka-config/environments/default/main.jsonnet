@@ -51,7 +51,10 @@ local secrets = std.parseYaml(importstr '/dev/stdin');
 
   ingressNginx: ingressNginx.all(),
 
-  kubePrometheusStack: kubePrometheusStack.all(),
+  kubePrometheusStack: kubePrometheusStack.all(
+    grafanaAdminUsername=secrets.grafana.admin.username,
+    grafanaAdminPassword=secrets.grafana.admin.password,
+  ),
 
   miniflux: miniflux.deployment() + miniflux.secrets(
     pgUrl=pgUrl,
