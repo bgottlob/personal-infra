@@ -15,42 +15,42 @@ resource "linode_domain_record" "protonmail_txt" {
 resource "linode_domain_record" "protonmail_mx_1" {
   domain_id = linode_domain.bgottlob.id
   record_type = "MX"
-  target = "mail.protonmail.ch"
+  target = "in1-smtp.messagingengine.com"
   priority = 10
 }
 
 resource "linode_domain_record" "protonmail_mx_2" {
   domain_id = linode_domain.bgottlob.id
   record_type = "MX"
-  target = "mailsec.protonmail.ch"
+  target = "in2-smtp.messagingengine.com"
   priority = 20
 }
 
 resource "linode_domain_record" "protonmail_spf" {
   domain_id = linode_domain.bgottlob.id
   record_type = "TXT"
-  target = "v=spf1 include:_spf.protonmail.ch ~all"
+  target = "v=spf1 include:spf.messagingengine.com ?all"
 }
 
 resource "linode_domain_record" "protonmail_dkim_1" {
   domain_id = linode_domain.bgottlob.id
-  name = "protonmail._domainkey"
+  name = "fm1._domainkey"
   record_type = "CNAME"
-  target = "protonmail.domainkey.drwtk2chdc5drbmwi3ywgiz6re3m3qwr54k5m344witsbpfsfthea.domains.proton.ch"
+  target = "fm1.bgottlob.com.dkim.fmhosted.com"
 }
 
 resource "linode_domain_record" "protonmail_dkim_2" {
   domain_id = linode_domain.bgottlob.id
-  name = "protonmail2._domainkey"
+  name = "fm2._domainkey"
   record_type = "CNAME"
-  target = "protonmail2.domainkey.drwtk2chdc5drbmwi3ywgiz6re3m3qwr54k5m344witsbpfsfthea.domains.proton.ch"
+  target = "fm2.bgottlob.com.dkim.fmhosted.com"
 }
 
 resource "linode_domain_record" "protonmail_dkim_3" {
   domain_id = linode_domain.bgottlob.id
-  name = "protonmail3._domainkey"
+  name = "fm3._domainkey"
   record_type = "CNAME"
-  target = "protonmail3.domainkey.drwtk2chdc5drbmwi3ywgiz6re3m3qwr54k5m344witsbpfsfthea.domains.proton.ch"
+  target = "fm3.bgottlob.com.dkim.fmhosted.com"
 }
 
 resource "linode_domain_record" "protonmail_dmarc" {
