@@ -9,3 +9,6 @@ vendor/
 
 # charts vendored by `tk tool charts`
 charts/
+
+# rust compiler output
+target/
