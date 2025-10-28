@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use crate::PortProtocol;
-use std::{collections::BTreeMap, fmt};
+use std::collections::BTreeMap;
 
 use k8s_openapi::{
     api::core::v1::{Service, ServicePort, ServiceSpec},

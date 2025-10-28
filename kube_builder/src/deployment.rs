@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, PodSpec, PodTemplateSpec, SecretKeySelector}}, apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, SecretKeySelector, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
 
 use crate::PortProtocol;
 
@@ -12,11 +12,18 @@ pub struct DeploymentBuilder {
     selector_match_labels: BTreeMap<String, String>,
     pod_labels: BTreeMap<String, String>,
     containers: Vec<Container>,
+    volumes: Vec<Volume>,
+    service_account_name: Option<String>,
 }
 
 impl DeploymentBuilder {
     pub fn new() -> Self {
         DeploymentBuilder::default()
+    }
+
+    pub fn service_account_name<S: Into<String>>(&mut self, sa: S) -> &mut Self {
+        self.service_account_name = Some(sa.into());
+        self
     }
 
     pub fn name<S: Into<String>>(&mut self, name: S) -> &mut Self {
@@ -43,7 +50,7 @@ impl DeploymentBuilder {
         N: Into<String>,
         I: Into<String>,
         P: Into<String>,
-    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>) -> &mut Self {
+    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>, liveness_probe: Option<Probe>) -> &mut Self {
         let container = Container {
             name: name.into(),
             image: Some(image.into()),
@@ -54,9 +61,85 @@ impl DeploymentBuilder {
                 ..Default::default()
             }]),
             env: Some(env),
+            liveness_probe,
             ..Default::default()
         };
         self.containers.push(container);
+        self
+    }
+
+    pub fn tailscale_container(&mut self) -> &mut Self {
+        let container = Container {
+            name: "ts-sidecar".into(),
+            image: Some("ghcr.io/tailscale/tailscale:latest".into()),
+            security_context: Some(SecurityContext {
+                privileged: Some(true),
+                ..Default::default()
+            }),
+            env: Some(vec![
+                EnvVar {
+                    name: "TS_KUBE_SECRET".into(),
+                    value: Some("tailscale-auth".into()),
+                    ..Default::default()
+                },
+                EnvVar {
+                    name: "TS_USERSPACE".into(),
+                    value: Some("false".into()),
+                    ..Default::default()
+                },
+                EnvVar {
+                    name: "TS_AUTHKEY".into(),
+                    value_from: Some(EnvVarSource {
+                        secret_key_ref: Some(SecretKeySelector {
+                            key: "TS_AUTHKEY".into(),
+                            name: "tailscale-auth".into(),
+                            optional: Some(true)
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                EnvVar {
+                    name: "POD_NAME".into(),
+                    value_from: Some(EnvVarSource {
+                        field_ref: Some(ObjectFieldSelector {
+                            api_version: Some("v1".into()),
+                            field_path: "metadata.name".into(),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                EnvVar {
+                    name: "POD_UID".into(),
+                    value_from: Some(EnvVarSource {
+                        field_ref: Some(ObjectFieldSelector {
+                            api_version: Some("v1".into()),
+                            field_path: "metadata.uid".into(),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }
+            ]),
+            ..Default::default()
+        };
+        self.containers.push(container);
+        self
+    }
+
+    pub fn volume_from_pvc<N: Into<String>, P: Into<String>>(&mut self, name: N, pvc_name: P) -> &mut Self {
+        let volume = Volume {
+            name: name.into(),
+            persistent_volume_claim: Some(PersistentVolumeClaimVolumeSource {
+                claim_name: pvc_name.into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        self.volumes.push(volume);
         self
     }
 
@@ -67,6 +150,11 @@ impl DeploymentBuilder {
             false => Ok(self.containers.clone()),
             true => Err(anyhow!("At least one container must be added")),
         }?;
+
+        let volumes = match self.containers.is_empty() {
+            true => None,
+            false => Some(self.volumes.clone()),
+        };
 
         let deployment = Deployment {
             metadata: ObjectMeta {
@@ -86,6 +174,8 @@ impl DeploymentBuilder {
                     }),
                     spec: Some(PodSpec {
                         containers: containers,
+                        volumes,
+                        service_account_name: self.service_account_name.clone(),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -143,5 +233,21 @@ impl EnvBuilder {
 
     pub fn build(&self) -> Vec<EnvVar> {
         self.vars.clone()
+    }
+}
+
+pub fn http_probe<S: Into<String>>(path: S, port: IntOrString) -> Probe {
+    Probe {
+        failure_threshold: Some(3),
+        http_get: Some(HTTPGetAction {
+            path: Some(path.into()),
+            port: port,
+            scheme: Some("HTTP".into()),
+            ..Default::default()
+        }),
+        period_seconds: Some(10),
+        success_threshold: Some(1),
+        timeout_seconds: Some(1),
+        ..Default::default()
     }
 }

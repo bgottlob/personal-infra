@@ -5,6 +5,7 @@ use serde::Deserialize;
 pub struct Secrets {
     pub postgres: PostgresSecrets,
     pub miniflux: MinifluxSecrets,
+    pub tailscale: TailscaleSecrets,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -15,6 +16,11 @@ pub struct PostgresSecrets {
 #[derive(Deserialize, PartialEq, Debug)]
 pub struct MinifluxSecrets {
     pub admin: UserCredentials,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct TailscaleSecrets {
+    pub authkey: String,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
