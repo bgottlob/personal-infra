@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, SecretKeySelector, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, SecretKeySelector, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
 
 use crate::PortProtocol;
 
@@ -14,11 +14,15 @@ pub struct DeploymentBuilder {
     containers: Vec<Container>,
     volumes: Vec<Volume>,
     service_account_name: Option<String>,
+    private_registry_pull_secret: bool,
 }
 
 impl DeploymentBuilder {
     pub fn new() -> Self {
-        DeploymentBuilder::default()
+        DeploymentBuilder {
+            private_registry_pull_secret: false,
+            ..Default::default()
+        }
     }
 
     pub fn service_account_name<S: Into<String>>(&mut self, sa: S) -> &mut Self {
@@ -65,6 +69,11 @@ impl DeploymentBuilder {
             ..Default::default()
         };
         self.containers.push(container);
+        self
+    }
+
+    pub fn use_private_registry(&mut self) -> &mut Self {
+        self.private_registry_pull_secret = true;
         self
     }
 
@@ -156,6 +165,14 @@ impl DeploymentBuilder {
             false => Some(self.volumes.clone()),
         };
 
+        let image_pull_secrets = if self.private_registry_pull_secret {
+            Some(vec![LocalObjectReference {
+                name: "registry-creds".into()
+            }])
+        } else {
+            None
+        };
+
         let deployment = Deployment {
             metadata: ObjectMeta {
                 name: Some(name),
@@ -176,6 +193,7 @@ impl DeploymentBuilder {
                         containers: containers,
                         volumes,
                         service_account_name: self.service_account_name.clone(),
+                        image_pull_secrets,
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -186,7 +204,6 @@ impl DeploymentBuilder {
         };
 
         Ok(deployment)
-
     }
 }
 

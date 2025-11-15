@@ -6,6 +6,34 @@ pub struct Secrets {
     pub postgres: PostgresSecrets,
     pub miniflux: MinifluxSecrets,
     pub tailscale: TailscaleSecrets,
+    pub registry: RegistrySecrets
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct RegistrySecrets {
+    pub auth: RegistryAuth,
+    pub bucket: CloudKeyPair,
+    pub login: RegistryLogin,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct RegistryAuth {
+    pub htpasswd: String,
+}
+
+// An access and secret key pair used to authenticate to public cloud services
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct CloudKeyPair {
+    pub access_key_id: String,
+    pub secret_key: String,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct RegistryLogin {
+    pub server: String,
+    pub username: String,
+    pub password: String,
+    pub email: String,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]

@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use std::collections::BTreeMap;
+use base64::prelude::*;
 
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::ObjectMeta};
 
@@ -40,5 +41,32 @@ impl SecretBuilder {
             string_data: Some(string_data),
             ..Default::default()
         })
+    }
+}
+
+pub fn docker_registry_secret(server: String, username: String, password: String, email: String) -> Secret {
+    let mut string_data: BTreeMap<String, String> = BTreeMap::new();
+
+    let value = k8s_openapi::serde_json::json!({
+        "auths": {
+            server: {
+                "username": username,
+                "password": password,
+                "email": email,
+                "auth": BASE64_STANDARD.encode(format!("{}:{}", username, password)),
+            }
+        }
+    });
+
+    string_data.insert(".dockerconfigjson".into(), value.to_string());
+
+    Secret {
+        metadata: ObjectMeta {
+            name: Some("registry-creds".into()),
+            ..Default::default()
+        },
+        type_: Some("kubernetes.io/dockerconfigjson".into()),
+        string_data: Some(string_data),
+        ..Default::default()
     }
 }
