@@ -59,7 +59,7 @@ pub fn pull(repo_name: &str, chart_name: &str, chart_version: &str, destination:
 
 }
 
-pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_name: Option<&str>, set_values: HashMap<&str, &str>, source_dir: &Path) -> anyhow::Result<String> {
+pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_name: Option<&str>, set_values: Option<HashMap<&str, &str>>, source_dir: &Path) -> anyhow::Result<String> {
     let path = source_dir.join(format!("{}-{}.tgz", chart_name, chart_version));
     let mut cmd = Command::new("helm");
     cmd.arg("template");
@@ -71,7 +71,7 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_
     cmd.args(["--namespace", namespace]);
     cmd.arg(path.to_str().unwrap());
 
-    set_values.iter().for_each(|(key, val)| {
+    set_values.unwrap_or_default().iter().for_each(|(key, val)| {
         cmd.args(["--set", format!("{}=\"{}\"", key, val).as_str()]);
     });
 
