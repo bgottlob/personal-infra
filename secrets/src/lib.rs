@@ -6,7 +6,8 @@ pub struct Secrets {
     pub postgres: PostgresSecrets,
     pub miniflux: MinifluxSecrets,
     pub tailscale: TailscaleSecrets,
-    pub registry: RegistrySecrets
+    pub registry: RegistrySecrets,
+    pub linode: LinodeSecrets,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -55,6 +56,11 @@ pub struct TailscaleSecrets {
 pub struct UserCredentials {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct LinodeSecrets {
+    pub csi_driver_token: String,
 }
 
 pub fn decrypt_parse_secrets(path: &str) -> anyhow::Result<Secrets> {

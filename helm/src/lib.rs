@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{collections::HashMap, process::Command};
 use std::path::Path;
 use anyhow::{anyhow, format_err};
 use serde_json::Value;
@@ -59,13 +59,23 @@ pub fn pull(repo_name: &str, chart_name: &str, chart_version: &str, destination:
 
 }
 
-pub fn template(chart_name: &str, chart_version: &str, namespace: &str, source_dir: &Path) -> anyhow::Result<String> {
+pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_name: Option<&str>, set_values: HashMap<&str, &str>, source_dir: &Path) -> anyhow::Result<String> {
     let path = source_dir.join(format!("{}-{}.tgz", chart_name, chart_version));
-    let output = Command::new("helm")
-        .arg("template")
-        .arg(path.to_str().unwrap())
-        .args(["--namespace", namespace])
-        .output()?;
+    let mut cmd = Command::new("helm");
+    cmd.arg("template");
+
+    if let Some(release_name) = release_name {
+        cmd.args(["--release-name", release_name]);
+    }
+
+    cmd.args(["--namespace", namespace]);
+    cmd.arg(path.to_str().unwrap());
+
+    set_values.iter().for_each(|(key, val)| {
+        cmd.args(["--set", format!("{}=\"{}\"", key, val).as_str()]);
+    });
+
+    let output = cmd.output()?;
 
     if output.status.success() {
         let stdout = String::from_utf8(output.stdout)?;
