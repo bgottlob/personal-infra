@@ -40,6 +40,7 @@
             cargo-wasi
             jsonnet
             jsonnet-bundler
+            just
             kubectl
             kubernetes-helm
             openssl
