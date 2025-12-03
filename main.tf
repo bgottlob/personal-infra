@@ -27,7 +27,7 @@ terraform {
 }
 
 provider "linode" {
-  token = data.sops_file.secrets.data["linode.token"]
+  token = data.sops_file.secrets.data["linode.terraformToken"]
 }
 
 resource "linode_lke_cluster" "personal" {
