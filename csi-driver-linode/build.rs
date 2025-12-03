@@ -33,7 +33,7 @@ fn main() -> anyhow::Result<()> {
         ("apiToken", secrets.linode.csi_driver_token.as_str()),
     ]);
 
-    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(RELEASE_NAME), values, out_path)?;
+    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(RELEASE_NAME), Some(values), out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
 }

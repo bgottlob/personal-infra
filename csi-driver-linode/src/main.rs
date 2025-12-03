@@ -47,7 +47,7 @@ fn create_encrypted_storage_classes() -> Vec<StorageClass> {
                                 (String::from("linodebs.csi.linode.com/encrypted"), String::from("true"))
             ])),
             allow_volume_expansion: Some(true),
-            provisioner: String::from("linodebs.csi.inode.com"),
+            provisioner: String::from("linodebs.csi.linode.com"),
             ..Default::default()
         },
         StorageClass {
@@ -63,7 +63,7 @@ fn create_encrypted_storage_classes() -> Vec<StorageClass> {
                                 (String::from("linodebs.csi.linode.com/encrypted"), String::from("true"))
             ])),
             allow_volume_expansion: Some(true),
-            provisioner: String::from("linodebs.csi.inode.com"),
+            provisioner: String::from("linodebs.csi.linode.com"),
             reclaim_policy: Some(String::from("Retain")),
             ..Default::default()
         }
