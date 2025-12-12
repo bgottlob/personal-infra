@@ -49,6 +49,13 @@ fn create_deploy() -> anyhow::Result<Deployment> {
             PortProtocol::TCP,
             env,
             None,
+            Some(ResourceRequirements {
+                requests: Some(BTreeMap::from([
+                    (String::from("cpu"), Quantity(String::from("50m"))),
+                    (String::from("memory"), Quantity(String::from("128Mi")))
+                ])),
+                ..Default::default()
+            })
         )
         .build()
 }

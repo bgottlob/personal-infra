@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, SecretKeySelector, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, ResourceRequirements, SecretKeySelector, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
 
 use crate::PortProtocol;
 
@@ -54,7 +54,7 @@ impl DeploymentBuilder {
         N: Into<String>,
         I: Into<String>,
         P: Into<String>,
-    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>, liveness_probe: Option<Probe>) -> &mut Self {
+    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>, liveness_probe: Option<Probe>, resources: Option<ResourceRequirements>) -> &mut Self {
         let container = Container {
             name: name.into(),
             image: Some(image.into()),
@@ -66,6 +66,7 @@ impl DeploymentBuilder {
             }]),
             env: Some(env),
             liveness_probe,
+            resources,
             ..Default::default()
         };
         self.containers.push(container);

@@ -2,7 +2,7 @@ use kube_builder::prelude::*;
 use std::collections::BTreeMap;
 
 use k8s_openapi::{
-    api::{apps::v1::Deployment, core::v1::{PersistentVolumeClaim, Secret}},
+    api::{apps::v1::Deployment, core::v1::{PersistentVolumeClaim, ResourceRequirements, Secret}},
     apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString},
 };
 
@@ -50,7 +50,16 @@ fn create_deploy() -> anyhow::Result<Deployment> {
             3456,
             PortProtocol::TCP,
             env,
-            Some(http_probe("/api/v1/info", IntOrString::String("http".into())))
+            Some(http_probe("/api/v1/info", IntOrString::String("http".into()))),
+            Some(
+                ResourceRequirements {
+                    requests: Some(BTreeMap::from([
+                        (String::from("cpu"), Quantity(String::from("50m"))),
+                        (String::from("memory"), Quantity(String::from("128Mi"))),
+                    ])),
+                    ..Default::default()
+                }
+            )
         )
         .tailscale_container()
         .volume_from_pvc("datb", DATA_PVC_NAME)
