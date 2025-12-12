@@ -2,13 +2,13 @@ use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
 
-use k8s_openapi::api::{
+use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{Secret, Service},
+    core::v1::{ResourceRequirements, Secret, Service},
     networking::v1::Ingress,
-};
+}, apimachinery::pkg::api::resource::Quantity};
 
-const PG_HOST: &str = "cnpg-database-cluster-rw.cnpg-database";
+const PG_HOST: &str = "main-db-rw.main-db";
 const PG_PORT: i32 = 5432;
 const DATABASE_NAME: &str = "miniflux";
 

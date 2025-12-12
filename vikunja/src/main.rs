@@ -9,7 +9,7 @@ use k8s_openapi::{
 const NAME: &str = "vikunja";
 const VERSION: &str = "0.24.6";
 
-const PG_HOST: &str = "cnpg-database-cluster-rw.cnpg-database";
+const PG_HOST: &str = "main-db-rw.main-db";
 const DATABASE_NAME: &str = "vikunja";
 const DB_SECRET_NAME: &str = "vikunja-database";
 
