@@ -42,3 +42,38 @@ cnpg-database-takeoff:
 cnpg-database-diff:
 	cargo build --target=wasm32-wasip1 --release
 	yoke takeoff -diff-only -create-namespace -namespace main-db main-db target/wasm32-wasip1/release/cnpg-database.wasm
+
+[working-directory: 'vikunja']
+vikunja-takeoff:
+	cargo build --target=wasm32-wasip1 --release
+	yoke takeoff -namespace vikunja vikunja target/wasm32-wasip1/release/vikunja.wasm
+
+[working-directory: 'vikunja']
+vikunja-debug:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -stdout -namespace vikunja vikunja target/wasm32-wasip1/debug/vikunja.wasm
+
+[working-directory: 'vikunja']
+vikunja-diff:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -diff-only -namespace vikunja vikunja target/wasm32-wasip1/debug/vikunja.wasm
+
+[working-directory: 'metrics-server']
+metrics-server-takeoff:
+	cargo build --target=wasm32-wasip1 --release
+	yoke takeoff -namespace kube-system metrics-server target/wasm32-wasip1/release/metrics-server.wasm
+
+[working-directory: 'metrics-server']
+metrics-server-debug:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -namespace kube-system metrics-server target/wasm32-wasip1/debug/metrics-server.wasm
+
+[working-directory: 'blog']
+blog-takeoff:
+	cargo build --target=wasm32-wasip1 --release
+	yoke takeoff -namespace blog blog target/wasm32-wasip1/release/blog.wasm
+
+[working-directory: 'blog']
+blog-debug:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -stdout -namespace blog blog target/wasm32-wasip1/debug/blog.wasm
