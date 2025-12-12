@@ -40,6 +40,8 @@ pub struct RegistryLogin {
 #[derive(Deserialize, PartialEq, Debug)]
 pub struct PostgresSecrets {
     pub app_user: UserCredentials,
+    pub super_user: UserCredentials,
+    pub backup_bucket: CloudKeyPair,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]

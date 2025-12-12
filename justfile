@@ -27,3 +27,18 @@ cert-manager-debug:
 cert-manager-takeoff:
 	cargo build --target=wasm32-wasip1 --release
 	yoke takeoff -cross-namespace -namespace cert-manager cert-manager target/wasm32-wasip1/release/cert-manager.wasm
+
+[working-directory: 'cnpg-database']
+cnpg-database-debug:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -stdout -namespace main-db main-db target/wasm32-wasip1/debug/cnpg-database.wasm
+
+[working-directory: 'cnpg-database']
+cnpg-database-takeoff:
+	cargo build --target=wasm32-wasip1 --release
+	yoke takeoff -force-conflicts -create-namespace -namespace main-db main-db target/wasm32-wasip1/release/cnpg-database.wasm
+
+[working-directory: 'cnpg-database']
+cnpg-database-diff:
+	cargo build --target=wasm32-wasip1 --release
+	yoke takeoff -diff-only -create-namespace -namespace main-db main-db target/wasm32-wasip1/release/cnpg-database.wasm
