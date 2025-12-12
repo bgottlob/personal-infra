@@ -72,7 +72,7 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_
     cmd.arg(path.to_str().unwrap());
 
     set_values.unwrap_or_default().iter().for_each(|(key, val)| {
-        cmd.args(["--set", format!("{}=\"{}\"", key, val).as_str()]);
+        cmd.args(["--set", format!("{}={}", key, val).as_str()]);
     });
 
     let output = cmd.output()?;
