@@ -77,3 +77,18 @@ blog-takeoff:
 blog-debug:
 	cargo build --target=wasm32-wasip1
 	yoke takeoff -stdout -namespace blog blog target/wasm32-wasip1/debug/blog.wasm
+
+[working-directory: 'wallabag']
+wallabag-takeoff:
+	cargo build --target=wasm32-wasip1 --release
+	yoke takeoff -namespace wallabag wallabag target/wasm32-wasip1/release/wallabag.wasm
+
+[working-directory: 'wallabag']
+wallabag-debug:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -stdout -namespace wallabag wallabag target/wasm32-wasip1/release/wallabag.wasm
+
+[working-directory: 'wallabag']
+wallabag-diff:
+	cargo build --target=wasm32-wasip1
+	yoke takeoff -diff-only -namespace wallabag wallabag target/wasm32-wasip1/release/wallabag.wasm
