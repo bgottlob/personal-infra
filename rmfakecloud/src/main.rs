@@ -55,7 +55,8 @@ fn create_deploy() -> anyhow::Result<Deployment> {
                 mount_path: volume_mount_path.to_string(),
                 read_only: Some(false),
                 ..Default::default()
-            }])
+            }]),
+            None,
         )
         .volume_from_pvc("data", PVC_NAME)
         .build()
@@ -83,7 +84,7 @@ fn create_ingress() -> anyhow::Result<Ingress> {
 fn create_pvc() -> anyhow::Result<PersistentVolumeClaim> {
     PersistentVolumeClaimBuilder::new()
         .storage_class_name("linode-block-storage-retain-encrypted")
-        .name("rmfakecloud-data")
+        .name(PVC_NAME)
         .storage_requests(Quantity(String::from(STORAGE_REQUEST)))
         .build()
 }
