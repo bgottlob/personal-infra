@@ -54,7 +54,7 @@ impl DeploymentBuilder {
         N: Into<String>,
         I: Into<String>,
         P: Into<String>,
-    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>, liveness_probe: Option<Probe>, resources: Option<ResourceRequirements>, volume_mounts: Option<Vec<VolumeMount>>) -> &mut Self {
+    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>, liveness_probe: Option<Probe>, resources: Option<ResourceRequirements>, volume_mounts: Option<Vec<VolumeMount>>, args: Option<Vec<String>>) -> &mut Self {
         let container = Container {
             name: name.into(),
             image: Some(image.into()),
@@ -68,6 +68,7 @@ impl DeploymentBuilder {
             liveness_probe,
             resources,
             volume_mounts,
+            args,
             ..Default::default()
         };
         self.containers.push(container);

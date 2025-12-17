@@ -63,6 +63,7 @@ pub struct UserCredentials {
 #[derive(Deserialize, PartialEq, Debug)]
 pub struct LinodeSecrets {
     pub csi_driver_token: String,
+    pub external_dns_token: String,
 }
 
 pub fn decrypt_parse_secrets(path: &str) -> anyhow::Result<Secrets> {
