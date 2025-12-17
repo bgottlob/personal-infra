@@ -1,5 +1,5 @@
 name  := "wallabag"
-flags := "-namespace wallabag"
+default_flags := "-namespace wallabag"
 
 takeoff extra_flags="":
 	cargo build --target=wasm32-wasip1 --release

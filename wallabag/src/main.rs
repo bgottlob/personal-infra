@@ -57,10 +57,13 @@ fn create_deploy() -> anyhow::Result<Deployment> {
             Some(ResourceRequirements {
                 requests: Some(BTreeMap::from([
                     (String::from("cpu"), Quantity(String::from("50m"))),
-                    (String::from("memory"), Quantity(String::from("128Mi")))
+                    // https://github.com/wallabag/android-app/issues/1472
+                    (String::from("memory"), Quantity(String::from("256Mi")))
                 ])),
                 ..Default::default()
-            })
+            }),
+            None,
+            None,
         )
         .build()
 }
