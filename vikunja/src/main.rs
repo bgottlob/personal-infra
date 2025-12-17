@@ -59,7 +59,8 @@ fn create_deploy() -> anyhow::Result<Deployment> {
                     ])),
                     ..Default::default()
                 }
-            )
+            ),
+            None,
         )
         .tailscale_container()
         .volume_from_pvc("datb", DATA_PVC_NAME)
@@ -71,6 +72,7 @@ fn create_deploy() -> anyhow::Result<Deployment> {
 fn create_pvc() -> anyhow::Result<PersistentVolumeClaim> {
     PersistentVolumeClaimBuilder::new()
         .name(DATA_PVC_NAME)
+        .storage_class_name("linode-block-storage-retain-encrypted")
         .storage_requests(Quantity("10Gi".to_string()))
         .build()
 }
