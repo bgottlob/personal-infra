@@ -130,7 +130,7 @@ fn create_rbac() -> (ClusterRole, ClusterRoleBinding, ServiceAccount) {
         subjects: Some(vec![Subject {
             name: sa_name.to_string(),
             kind: String::from("ServiceAccount"),
-            namespace: Some(String::from("ServiceAccount")),
+            namespace: Some(NAMESPACE.to_string()),
             ..Default::default()
         }]),
     };
