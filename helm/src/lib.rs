@@ -59,7 +59,7 @@ pub fn pull(repo_name: &str, chart_name: &str, chart_version: &str, destination:
 
 }
 
-pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_name: Option<&str>, set_values: Option<HashMap<&str, &str>>, source_dir: &Path) -> anyhow::Result<String> {
+pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_name: Option<&str>, set_values: Option<HashMap<&str, &str>>, values_file: Option<&Path>, source_dir: &Path) -> anyhow::Result<String> {
     let path = source_dir.join(format!("{}-{}.tgz", chart_name, chart_version));
     let mut cmd = Command::new("helm");
     cmd.arg("template");
@@ -74,6 +74,13 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_
     set_values.unwrap_or_default().iter().for_each(|(key, val)| {
         cmd.args(["--set", format!("{}={}", key, val).as_str()]);
     });
+
+    if let Some(values_path) = values_file {
+        cmd.args([
+            "--values",
+            source_dir.join(values_path).to_str().expect("conversion of values file path to str should succeed")
+        ]);
+    };
 
     let output = cmd.output()?;
 

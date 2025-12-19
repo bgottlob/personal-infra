@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, ResourceRequirements, SecretKeySelector, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, ResourceRequirements, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
 
 use crate::PortProtocol;
 
@@ -147,6 +147,37 @@ impl DeploymentBuilder {
             name: name.into(),
             persistent_volume_claim: Some(PersistentVolumeClaimVolumeSource {
                 claim_name: pvc_name.into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        self.volumes.push(volume);
+        self
+    }
+
+    pub fn volume_from_configmap<N: Into<String>, C: Into<String>, K: Into<String>, P: Into<String>>(&mut self, name: N, cm_name: C, key: K, path: P) -> &mut Self {
+        let volume = Volume {
+            name: name.into(),
+            config_map: Some(ConfigMapVolumeSource {
+                name: cm_name.into(),
+                items: Some(vec![KeyToPath {
+                    key: key.into(),
+                    path: path.into(),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        self.volumes.push(volume);
+        self
+    }
+
+    pub fn volume_from_secret<N: Into<String>, S: Into<String>>(&mut self, name: N, secret_name: S) -> &mut Self {
+        let volume = Volume {
+            name: name.into(),
+            secret: Some(SecretVolumeSource {
+                secret_name: Some(secret_name.into()),
                 ..Default::default()
             }),
             ..Default::default()

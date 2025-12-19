@@ -8,6 +8,7 @@ pub struct Secrets {
     pub tailscale: TailscaleSecrets,
     pub registry: RegistrySecrets,
     pub linode: LinodeSecrets,
+    pub velero: VeleroSecrets,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]
@@ -64,6 +65,11 @@ pub struct UserCredentials {
 pub struct LinodeSecrets {
     pub csi_driver_token: String,
     pub external_dns_token: String,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct VeleroSecrets {
+    pub bucket: CloudKeyPair,
 }
 
 pub fn decrypt_parse_secrets(path: &str) -> anyhow::Result<Secrets> {
