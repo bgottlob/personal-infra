@@ -1,3 +1,4 @@
+pub mod container;
 pub mod deployment;
 pub mod ingress;
 pub mod persistent_volume_claim;
@@ -6,6 +7,7 @@ pub mod service;
 pub mod tailscale;
 
 pub mod prelude {
+    pub use crate::container::*;
     pub use crate::deployment::*;
     pub use crate::ingress::*;
     pub use crate::secret::*;

@@ -1,9 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Probe, ResourceRequirements, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}, util::intstr::IntOrString}};
-
-use crate::PortProtocol;
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}}};
 
 #[derive(Default)]
 pub struct DeploymentBuilder {
@@ -50,27 +48,7 @@ impl DeploymentBuilder {
         self
     }
 
-    pub fn container<
-        N: Into<String>,
-        I: Into<String>,
-        P: Into<String>,
-    >(&mut self, name: N, image: I, port_name: P, port: i32, port_protocol: PortProtocol, env: Vec<EnvVar>, liveness_probe: Option<Probe>, resources: Option<ResourceRequirements>, volume_mounts: Option<Vec<VolumeMount>>, args: Option<Vec<String>>) -> &mut Self {
-        let container = Container {
-            name: name.into(),
-            image: Some(image.into()),
-            ports: Some(vec![ContainerPort {
-                name: Some(port_name.into()),
-                container_port: port,
-                protocol: Some(port_protocol.to_string()),
-                ..Default::default()
-            }]),
-            env: Some(env),
-            liveness_probe,
-            resources,
-            volume_mounts,
-            args,
-            ..Default::default()
-        };
+    pub fn container(&mut self, container: Container) -> &mut Self {
         self.containers.push(container);
         self
     }
@@ -238,67 +216,5 @@ impl DeploymentBuilder {
         };
 
         Ok(deployment)
-    }
-}
-
-#[derive(Default)]
-pub struct EnvBuilder {
-    vars: Vec<EnvVar>,
-}
-
-impl EnvBuilder {
-    pub fn new() -> EnvBuilder {
-        EnvBuilder::default()
-    }
-
-    pub fn env<N: Into<String>, V: Into<String>>(&mut self, name: N, value: V) -> &mut Self {
-        let var = EnvVar {
-            name: name.into(),
-            value: Some(value.into()),
-            ..Default::default()
-        };
-        self.vars.push(var);
-        self
-    }
-
-    pub fn env_from_secret<
-        N: Into<String>,
-        S: Into<String>,
-        K: Into<String>
-    >(&mut self, name: N, secret_name: S, secret_key: K) -> &mut Self {
-        let var = EnvVar {
-            name: name.into(),
-            value_from: Some(EnvVarSource {
-                secret_key_ref: Some(SecretKeySelector {
-                    key: secret_key.into(),
-                    name: secret_name.into(),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        self.vars.push(var);
-        self
-    }
-
-    pub fn build(&self) -> Vec<EnvVar> {
-        self.vars.clone()
-    }
-}
-
-pub fn http_probe<S: Into<String>>(path: S, port: IntOrString) -> Probe {
-    Probe {
-        failure_threshold: Some(3),
-        http_get: Some(HTTPGetAction {
-            path: Some(path.into()),
-            port: port,
-            scheme: Some("HTTP".into()),
-            ..Default::default()
-        }),
-        period_seconds: Some(10),
-        success_threshold: Some(1),
-        timeout_seconds: Some(1),
-        ..Default::default()
     }
 }

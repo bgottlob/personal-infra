@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{ResourceRequirements, Secret, Service},
+    core::v1::{Secret, Service},
     networking::v1::Ingress,
 }, apimachinery::pkg::api::resource::Quantity};
 
@@ -27,7 +27,12 @@ fn labels() -> BTreeMap<String, String> {
 }
 
 fn create_deploy() -> anyhow::Result<Deployment> {
-    let env = EnvBuilder::new()
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(format!("{}:{}", IMAGE, VERSION))
+        .container_port(PORT, "app", PortProtocol::TCP)
+        .cpu_request(Quantity(String::from("50m")))
+        .memory_request(Quantity(String::from("256Mi")))
 	.env_from_secret("SYMFONY__ENV__DATABASE_HOST", DATABASE_SECRET, "host")
 	.env_from_secret("SYMFONY__ENV__DATABASE_PORT", DATABASE_SECRET, "port")
         .env("SYMFONY__ENV__DATABASE_DRIVER", "pdo_pgsql")
@@ -39,32 +44,14 @@ fn create_deploy() -> anyhow::Result<Deployment> {
         .env_from_secret("POSTGRES_USER", DATABASE_SECRET, "user")
         .env_from_secret("SYMFONY__ENV__DATABASE_PASSWORD", DATABASE_SECRET, "password")
         .env_from_secret("SYMFONY__ENV__DATABASE_USER", DATABASE_SECRET, "user")
-        .build();
+        .build()?;
 
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
         .selector_match_labels(labels())
         .pod_labels(labels())
-        .container(
-            NAME,
-            format!("{}:{}", IMAGE, VERSION),
-            "app",
-            PORT,
-            PortProtocol::TCP,
-            env,
-            None,
-            Some(ResourceRequirements {
-                requests: Some(BTreeMap::from([
-                    (String::from("cpu"), Quantity(String::from("50m"))),
-                    // https://github.com/wallabag/android-app/issues/1472
-                    (String::from("memory"), Quantity(String::from("256Mi")))
-                ])),
-                ..Default::default()
-            }),
-            None,
-            None,
-        )
+        .container(container)
         .build()
 }
 
