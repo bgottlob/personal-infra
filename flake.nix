@@ -10,6 +10,7 @@
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system: let
       yokeVersion = "0.15.6";
+      kopiumVersion = "0.22.5";
       overlays = [
         (import rust-overlay)
         (final: prev: {
@@ -26,6 +27,24 @@
 	     # Tests for this build a kind cluster, so skip that
 	     doCheck = false;
            };
+        })
+
+        (final: prev: {
+         kopium = pkgs.rustPlatform.buildRustPackage rec {
+           pname = "kopium";
+           name = "kopium";
+           verison = kopiumVersion;
+           src = pkgs.fetchFromGitHub {
+               owner = "kube-rs";
+               repo = "kopium";
+               tag = "${kopiumVersion}";
+               hash = "sha256-zYmb+HxwEKEnzdqAzvki5M+NA2fGP174pRkU6B4WmZI=";
+           };
+           cargoLock.lockFile = src + "/Cargo.lock";
+           # todo - get tests working
+           # https://github.com/NixOS/nixpkgs/blob/master/doc/languages-frameworks/rust.section.md#disabling-package-tests-disabling-package-tests
+           doCheck = false;
+         };
          })
       ];
       pkgs = import nixpkgs { inherit system overlays; };
@@ -51,6 +70,8 @@
             velero
             yoke
             pkg-config
+            kopium
+            cargo-generate
           ];
           nativeBuildInputs = [rust];
         };
