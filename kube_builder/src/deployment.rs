@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::{apis::meta::v1::{LabelSelector, ObjectMeta}}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSecurityContext, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta}};
 
 #[derive(Default)]
 pub struct DeploymentBuilder {
@@ -13,6 +13,7 @@ pub struct DeploymentBuilder {
     volumes: Vec<Volume>,
     service_account_name: Option<String>,
     private_registry_pull_secret: bool,
+    security_context: Option<PodSecurityContext>,
 }
 
 impl DeploymentBuilder {
@@ -164,6 +165,11 @@ impl DeploymentBuilder {
         self
     }
 
+    pub fn security_context(&mut self, pod_security_context: PodSecurityContext) -> &mut Self {
+        self.security_context = Some(pod_security_context);
+        self
+    }
+
     pub fn build(&self) -> anyhow::Result<Deployment> {
         let name = self.name.clone().ok_or(anyhow!("Deployment must have a name"))?;
 
@@ -202,6 +208,7 @@ impl DeploymentBuilder {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
+                        security_context: self.security_context.clone(),
                         containers: containers,
                         volumes,
                         service_account_name: self.service_account_name.clone(),
