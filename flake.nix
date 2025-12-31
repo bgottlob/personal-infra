@@ -72,6 +72,7 @@
             pkg-config
             kopium
             cargo-generate
+            s3cmd
           ];
           nativeBuildInputs = [rust];
         };
