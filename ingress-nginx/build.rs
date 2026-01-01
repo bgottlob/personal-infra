@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
         File::create(out_path.join("helm-output.yaml"))?
     );
 
-    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, out_path)?;
+    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(CHART_NAME), None, None, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
 }
