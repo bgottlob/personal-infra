@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use k8s_openapi::{api::{apps::v1::Deployment, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
+use k8s_openapi::{api::{apps::v1::Deployment, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}, networking::v1::Ingress}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
 use kube::core::ObjectMeta;
 use kube_builder::prelude::*;
 use serde_json::json;
@@ -50,7 +50,7 @@ fn create_deployment() -> anyhow::Result<Deployment> {
         .memory_limit(Quantity(String::from("256Mi")))
         .volume_mount(VolumeMount {
             mount_path: String::from("/var/lib/grafana"),
-            name: String::from("grafana-pv"),
+            name: String::from("grafana"),
             ..Default::default()
         })
         .volume_mount(VolumeMount {
@@ -65,7 +65,7 @@ fn create_deployment() -> anyhow::Result<Deployment> {
         .name(NAME)
         .selector_match_labels(labels())
         .pod_labels(labels())
-        .volume_from_pvc("grafana-pv", NAME)
+        .volume_from_pvc("grafana", NAME)
         .container(container)
         .security_context(PodSecurityContext {
             fs_group: Some(472),
@@ -79,8 +79,18 @@ fn create_deployment() -> anyhow::Result<Deployment> {
 fn create_service() -> anyhow::Result<Service> {
     ServiceBuilder::new()
         .name(NAME)
-        .port(CONTAINER_PORT_NAME, PortProtocol::TCP, PORT, PORT)
+        .port(CONTAINER_PORT_NAME, PortProtocol::TCP, 80, PORT)
         .selector(labels())
+        .build()
+}
+
+fn create_ingress() -> anyhow::Result<Ingress> {
+    IngressBuilder::new()
+        .name(NAME)
+        .ingress_class_name("nginx")
+        .tls_host("grafana.bgottlob.com", NAME)
+        .rule("grafana.bgottlob.com", "/", "Prefix", NAME, 3000)
+        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
         .build()
 }
 
@@ -88,6 +98,7 @@ fn create_pvc() -> anyhow::Result<PersistentVolumeClaim> {
     PersistentVolumeClaimBuilder::new()
         .name(NAME)
         .storage_requests(Quantity(String::from("1Gi")))
+        .storage_class_name("linode-block-storage-retain-encrypted")
         .build()
 }
 
@@ -126,16 +137,19 @@ fn main() -> anyhow::Result<()> {
 
     let pvc = create_pvc()?;
     let svc = create_service()?;
+    let ing = create_ingress()?;
     let deployment = create_deployment()?;
     let cm = create_configmap()?;
 
     let pvc_value = serde_json::to_value(&pvc)?;
     let svc_value = serde_json::to_value(&svc)?;
+    let ing_value = serde_json::to_value(&ing)?;
     let deployment_value = serde_json::to_value(&deployment)?;
     let cm_value = serde_json::to_value(&cm)?;
 
     resources.push(pvc_value);
     resources.push(svc_value);
+    resources.push(ing_value);
     resources.push(deployment_value);
     resources.push(cm_value);
 
