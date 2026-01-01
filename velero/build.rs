@@ -4,12 +4,12 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 use serde_json::json;
 
-const CHART_VERSION: &str = "6.6.0";
+const CHART_VERSION: &str = "11.3.1";
 const REPO_NAME: &str = "vmwareTanzu";
 const REPO_URL: &str = "https://vmware-tanzu.github.io/helm-charts";
 const CHART_NAME: &str = "velero";
 const NAMESPACE: &str = "velero";
-const VELERO_PLUGIN_VERSION: &str = "1.9.2";
+const VELERO_PLUGIN_VERSION: &str = "1.13.1";
 
 fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value {
     let secret_name = "velero-s3";
@@ -30,6 +30,8 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
         "deployNodeAgent": true,
         // Linode volumes do not support snapshotting
         "snapshotsEnabled": false,
+        // File system backups
+        "backupsEnabled": true,
         "credentials": {
             "name": secret_name,
             "secretContents": {
@@ -61,6 +63,7 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
         "resources": {
             "requests": {
                 "cpu": "100m",
+                "memory": "128Mi",
             },
         },
         "nodeAgent": {
@@ -69,6 +72,11 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
                     "cpu": "100m",
                 },
             },
+        },
+        "kubectl": {
+            "image": {
+                "tag": "1.33.4"
+            }
         },
     })
 }
@@ -85,8 +93,6 @@ fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|_| panic!("Should parse {} file into Secrets struct", secrets_path));
 
     helm::pull(REPO_NAME, CHART_NAME, CHART_VERSION, out_path)?;
-
-    println!("cargo::warning={}", out_dir);
 
     let mut out_file = BufWriter::new(
         File::create(out_path.join("helm-output.yaml"))?
