@@ -1,0 +1,8 @@
+[template]
+cargo_generate_version = ">=0.23.0"
+
+[placeholders]
+namespace = { prompt = "Kubernetes namespace to deploy to:", type = "string" }
+ingress_hostname = { prompt = "External hostname, if needed:", type = "string", default = "" }
+use_volume = { prompt = "Does the app need a persistent volume?", type = "bool", default = false }
+use_postgres = { prompt = "Does app need access to Postgres?", type = "bool", default = false }
