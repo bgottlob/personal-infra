@@ -7,12 +7,26 @@ use k8s_openapi::{
     apimachinery::pkg::apis::meta::v1::ObjectMeta,
 };
 
-#[derive(Default)]
 pub struct ServiceBuilder {
     name: Option<String>,
     ports: Vec<ServicePort>,
     selector: BTreeMap<String, String>,
     annotations: BTreeMap<String, String>,
+    headless: bool,
+    labels: BTreeMap<String, String>,
+}
+
+impl Default for ServiceBuilder {
+    fn default() -> Self {
+        ServiceBuilder {
+            name: None,
+            ports: Vec::default(),
+            selector: BTreeMap::default(),
+            annotations: BTreeMap::default(),
+            headless: false,
+            labels: BTreeMap::default(),
+        }
+    }
 }
 
 impl ServiceBuilder {
@@ -78,6 +92,16 @@ impl ServiceBuilder {
         self
     }
 
+    pub fn headless(&mut self) -> &mut Self {
+        self.headless = true;
+        self
+    }
+
+    pub fn label<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) -> &mut Self {
+        self.labels.insert(key.into(), value.into());
+        self
+    }
+
     pub fn build(&self) -> anyhow::Result<Service> {
         let name = self.name.clone().ok_or(anyhow!("Name must be set"))?;
         let annotations = self.annotations.clone();
@@ -94,13 +118,25 @@ impl ServiceBuilder {
             true => Err(anyhow!("At least one service port must be set")),
         }?;
 
+        let cluster_ip = match self.headless {
+            true  => Some(String::from("None")),
+            false => None,
+        };
+
+        let labels = match self.labels.is_empty() {
+            false => Some(self.labels.clone()),
+            true => None,
+        };
+
         let service = Service {
             metadata: ObjectMeta {
                 name: Some(name),
                 annotations: Some(annotations),
+                labels,
                 ..Default::default()
             },
             spec: Some(ServiceSpec {
+                cluster_ip: cluster_ip,
                 selector: Some(selector),
                 ports: Some(ports),
                 ..Default::default()

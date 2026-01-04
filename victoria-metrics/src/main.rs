@@ -4,10 +4,11 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use kube::core::ObjectMeta;
-use vm::vm_single::*;
-use vm::vm_pod_scrape::*;
-use vm::vm_node_scrape::*;
 use vm::vm_agent::*;
+use vm::vm_node_scrape::*;
+use vm::vm_pod_scrape::*;
+use vm::vm_service_scrape::*;
+use vm::vm_single::*;
 
 use crate::vm::vm_pod_scrape::VMPodScrape;
 
@@ -217,12 +218,50 @@ fn create_all_pods_scrape() -> VMPodScrape {
     }
 }
 
+fn create_ksm_scrape() -> VMServiceScrape {
+    let ksm_labels = BTreeMap::from([
+        (String::from("vm_target"), String::from("kube-state-metrics")),
+    ]);
+
+    VMServiceScrape {
+        metadata: ObjectMeta {
+            name: Some(String::from("kube-state-metrics")),
+            ..Default::default()
+        },
+        spec: VmServiceScrapeSpec {
+            endpoints: vec![
+                VmServiceScrapeEndpoints {
+                    honor_labels: Some(true),
+                    // Port name in kube-state-metrics Service
+                    port: Some(String::from("http-metrics")),
+                    /*
+                    bearer_token_secret: Some(VmServiceScrapeEndpointsBearerTokenSecret {
+                        key: String::from(""),
+                        ..Default::default()
+                    }),
+                    */
+                    path: Some(String::from("/metrics")),
+                    ..Default::default()
+                }
+            ],
+            job_label: Some(String::from("vm_target")),
+            selector: Some(VmServiceScrapeSelector {
+                match_labels: Some(ksm_labels),
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let vm = create_vm();
     let agent = create_agent();
     let all_pods_scrape = create_all_pods_scrape();
     let cadvisor_scrape = create_cadvisor_scrape();
     let kubelet_scrape = create_kubelet_scrape();
+    let ksm_scrape = create_ksm_scrape();
 
     let mut resources: Vec<serde_json::Value> = Vec::new();
     let vm_value = serde_json::to_value(vm)?;
@@ -230,12 +269,14 @@ fn main() -> anyhow::Result<()> {
     let all_pods_scrape_value = serde_json::to_value(all_pods_scrape)?;
     let cadvisor_scrape_value = serde_json::to_value(cadvisor_scrape)?;
     let kubelet_scrape_value = serde_json::to_value(kubelet_scrape)?;
+    let ksm_scrape_value = serde_json::to_value(ksm_scrape)?;
 
     resources.push(vm_value);
     resources.push(agent_value);
     resources.push(all_pods_scrape_value);
     resources.push(cadvisor_scrape_value);
     resources.push(kubelet_scrape_value);
+    resources.push(ksm_scrape_value);
     println!("{}", serde_json::to_string(&resources)?);
 
     Ok(())

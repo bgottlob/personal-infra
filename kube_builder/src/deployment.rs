@@ -14,6 +14,7 @@ pub struct DeploymentBuilder {
     service_account_name: Option<String>,
     private_registry_pull_secret: bool,
     security_context: Option<PodSecurityContext>,
+    automount_service_account_token: Option<bool>,
 }
 
 impl DeploymentBuilder {
@@ -56,6 +57,11 @@ impl DeploymentBuilder {
 
     pub fn use_private_registry(&mut self) -> &mut Self {
         self.private_registry_pull_secret = true;
+        self
+    }
+
+    pub fn automount_service_account_token(&mut self, enabled: bool) -> &mut Self {
+        self.automount_service_account_token = Some(enabled);
         self
     }
 
@@ -208,6 +214,7 @@ impl DeploymentBuilder {
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
+                        automount_service_account_token: self.automount_service_account_token,
                         security_context: self.security_context.clone(),
                         containers: containers,
                         volumes,

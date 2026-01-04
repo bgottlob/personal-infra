@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use k8s_openapi::{api::core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, Probe, ResourceRequirements, SecretKeySelector, VolumeMount}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
+use k8s_openapi::{api::core::v1::{Container, ContainerPort, EnvVar, EnvVarSource, HTTPGetAction, Probe, ResourceRequirements, SecretKeySelector, SecurityContext, VolumeMount}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
 
 use crate::PortProtocol;
 
@@ -14,6 +14,7 @@ pub struct ContainerBuilder {
     liveness_probe: Option<Probe>,
     readiness_probe: Option<Probe>,
     volume_mounts: Vec<VolumeMount>,
+    security_context: Option<SecurityContext>,
 }
 
 pub fn http_probe<P: Into<String>>(path: P, port: IntOrString, failure_threshold: Option<i32>, period_seconds: Option<i32>, timeout_seconds: Option<i32>, success_threshold: Option<i32>) -> Probe {
@@ -162,6 +163,11 @@ impl ContainerBuilder {
         self
     }
 
+    pub fn security_context(&mut self, security_context: SecurityContext) -> &mut Self {
+        self.security_context = Some(security_context);
+        self
+    }
+
     pub fn volume_mount(&mut self, volume_mount: VolumeMount) -> &mut Self {
         self.volume_mounts.push(volume_mount);
         self
@@ -199,6 +205,7 @@ impl ContainerBuilder {
             ports: container_ports,
             liveness_probe: self.liveness_probe.clone(),
             readiness_probe: self.readiness_probe.clone(),
+            security_context: self.security_context.clone(),
             volume_mounts,
             ..Default::default()
         };
