@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{PersistentVolumeClaim, ResourceRequirements, Service, VolumeMount},
+    core::v1::{PersistentVolumeClaim, Service, VolumeMount},
     networking::v1::Ingress,
 }, apimachinery::pkg::api::resource::Quantity};
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
@@ -26,46 +26,42 @@ fn labels() -> BTreeMap<String, String> {
 }
 
 fn create_deploy() -> anyhow::Result<Deployment> {
-    let env = EnvBuilder::new()
+    let probe = http_probe("/api/health", IntOrString::String(String::from("app")), None, None, None, None);
+
+    let memory = Quantity(String::from("300Mi"));
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(format!("{}:{}", IMAGE, VERSION))
+        .container_port(PORT, "app", PortProtocol::TCP)
         .env("TZ", "America/New_York")
-        .build();
+        .readiness_probe(probe)
+        .cpu_request(Quantity(String::from("25m")))
+        .memory_request(memory.clone())
+        .memory_limit(memory)
+        .volume_mount(
+            VolumeMount {
+                name: String::from("library"),
+                mount_path: String::from("/kavita/library"),
+                read_only: Some(false),
+                ..Default::default()
+            },
+        )
+        .volume_mount(
+            VolumeMount {
+                name: String::from("config"),
+                mount_path: String::from("/kavita/config"),
+                read_only: Some(false),
+                ..Default::default()
+            },
+        )
+        .build()?;
 
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
         .selector_match_labels(labels())
         .pod_labels(labels())
-        .container(
-            NAME,
-            format!("{}:{}", IMAGE, VERSION),
-            "app",
-            PORT,
-            PortProtocol::TCP,
-            env,
-            Some(http_probe("/api/health", IntOrString::String(String::from("app")))),
-            Some(ResourceRequirements {
-                requests: Some(BTreeMap::from([
-                    (String::from("cpu"), Quantity(String::from("50m"))),
-                    (String::from("memory"), Quantity(String::from("128Mi")))
-                ])),
-                ..Default::default()
-            }),
-            Some(vec![
-                VolumeMount {
-                    name: String::from("library"),
-                    mount_path: String::from("/kavita/library"),
-                    read_only: Some(false),
-                    ..Default::default()
-                },
-                VolumeMount {
-                    name: String::from("config"),
-                    mount_path: String::from("/kavita/config"),
-                    read_only: Some(false),
-                    ..Default::default()
-                },
-            ]),
-            None,
-        )
+        .container(container)
         .volume_from_pvc("library", LIBRARY_PVC_NAME)
         .volume_from_pvc("config", CONFIG_PVC_NAME)
         .build()
