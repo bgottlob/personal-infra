@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{PersistentVolumeClaim, ResourceRequirements, Service, VolumeMount},
+    core::v1::{PersistentVolumeClaim, Service, VolumeMount},
     networking::v1::Ingress,
 }, apimachinery::pkg::api::resource::Quantity};
 
@@ -24,40 +24,32 @@ fn labels() -> BTreeMap<String, String> {
 
 fn create_deploy() -> anyhow::Result<Deployment> {
     let volume_mount_path = "/data/rmfakecloud";
-    let env = EnvBuilder::new()
+
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(format!("{}:{}", IMAGE, VERSION))
         .env("DATADIR", volume_mount_path)
         .env("STORAGE_URL", format!("https://{}", HOSTNAME))
         .env("PORT", format!("{}", PORT))
-        .build();
+        .container_port(PORT, "app", PortProtocol::TCP)
+        .cpu_request(Quantity(String::from("50m")))
+        .memory_request(Quantity(String::from("128Mi")))
+        .volume_mount(
+            VolumeMount {
+                name: String::from("data"),
+                mount_path: volume_mount_path.to_string(),
+                read_only: Some(false),
+                ..Default::default()
+            }
+        )
+        .build()?;
 
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
         .selector_match_labels(labels())
         .pod_labels(labels())
-        .container(
-            NAME,
-            format!("{}:{}", IMAGE, VERSION),
-            "app",
-            PORT,
-            PortProtocol::TCP,
-            env,
-            None,
-            Some(ResourceRequirements {
-                requests: Some(BTreeMap::from([
-                    (String::from("cpu"), Quantity(String::from("50m"))),
-                    (String::from("memory"), Quantity(String::from("128Mi")))
-                ])),
-                ..Default::default()
-            }),
-            Some(vec![VolumeMount {
-                name: String::from("data"),
-                mount_path: volume_mount_path.to_string(),
-                read_only: Some(false),
-                ..Default::default()
-            }]),
-            None,
-        )
+        .container(container)
         .volume_from_pvc("data", PVC_NAME)
         .build()
 }
