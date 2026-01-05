@@ -31,6 +31,8 @@ pub struct ClusterIssuerSpec {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerAcme {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "caBundle")]
+    pub ca_bundle: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "disableAccountKeyGeneration")]
     pub disable_account_key_generation: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -207,6 +209,8 @@ pub struct ClusterIssuerAcmeSolversDns01AzureDnsManagedIdentity {
     pub client_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "resourceID")]
     pub resource_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "tenantID")]
+    pub tenant_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -292,9 +296,12 @@ pub struct ClusterIssuerAcmeSolversDns01Route53 {
     pub access_key_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "accessKeyIDSecretRef")]
     pub access_key_id_secret_ref: Option<ClusterIssuerAcmeSolversDns01Route53AccessKeyIdSecretRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auth: Option<ClusterIssuerAcmeSolversDns01Route53Auth>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "hostedZoneID")]
     pub hosted_zone_id: Option<String>,
-    pub region: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "secretAccessKeySecretRef")]
@@ -305,6 +312,24 @@ pub struct ClusterIssuerAcmeSolversDns01Route53 {
 pub struct ClusterIssuerAcmeSolversDns01Route53AccessKeyIdSecretRef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversDns01Route53Auth {
+    pub kubernetes: ClusterIssuerAcmeSolversDns01Route53AuthKubernetes,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversDns01Route53AuthKubernetes {
+    #[serde(rename = "serviceAccountRef")]
+    pub service_account_ref: ClusterIssuerAcmeSolversDns01Route53AuthKubernetesServiceAccountRef,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversDns01Route53AuthKubernetesServiceAccountRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audiences: Option<Vec<String>>,
     pub name: String,
 }
 
@@ -339,6 +364,8 @@ pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoute {
     pub labels: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "parentRefs")]
     pub parent_refs: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRouteParentRefs>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "podTemplate")]
+    pub pod_template: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplate>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "serviceType")]
     pub service_type: Option<String>,
 }
@@ -359,9 +386,413 @@ pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRouteParentRefs {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplate {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpec>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateMetadata {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpec {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub affinity: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinity>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "imagePullSecrets")]
+    pub image_pull_secrets: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecImagePullSecrets>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeSelector")]
+    pub node_selector: Option<BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "priorityClassName")]
+    pub priority_class_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "securityContext")]
+    pub security_context: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContext>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "serviceAccountName")]
+    pub service_account_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tolerations: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecTolerations>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinity {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeAffinity")]
+    pub node_affinity: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinity>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "podAffinity")]
+    pub pod_affinity: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinity>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "podAntiAffinity")]
+    pub pod_anti_affinity: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinity>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinity {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferredDuringSchedulingIgnoredDuringExecution")]
+    pub preferred_during_scheduling_ignored_during_execution: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecution>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "requiredDuringSchedulingIgnoredDuringExecution")]
+    pub required_during_scheduling_ignored_during_execution: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecution>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecution {
+    pub preference: ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecutionPreference,
+    pub weight: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecutionPreference {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecutionPreferenceMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchFields")]
+    pub match_fields: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecutionPreferenceMatchFields>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecutionPreferenceMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityPreferredDuringSchedulingIgnoredDuringExecutionPreferenceMatchFields {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecution {
+    #[serde(rename = "nodeSelectorTerms")]
+    pub node_selector_terms: Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecutionNodeSelectorTerms>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecutionNodeSelectorTerms {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecutionNodeSelectorTermsMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchFields")]
+    pub match_fields: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecutionNodeSelectorTermsMatchFields>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecutionNodeSelectorTermsMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityNodeAffinityRequiredDuringSchedulingIgnoredDuringExecutionNodeSelectorTermsMatchFields {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinity {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferredDuringSchedulingIgnoredDuringExecution")]
+    pub preferred_during_scheduling_ignored_during_execution: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecution>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "requiredDuringSchedulingIgnoredDuringExecution")]
+    pub required_during_scheduling_ignored_during_execution: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecution>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecution {
+    #[serde(rename = "podAffinityTerm")]
+    pub pod_affinity_term: ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTerm,
+    pub weight: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTerm {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
+    pub label_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
+    pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub namespaces: Option<Vec<String>>,
+    #[serde(rename = "topologyKey")]
+    pub topology_key: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecution {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
+    pub label_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
+    pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub namespaces: Option<Vec<String>>,
+    #[serde(rename = "topologyKey")]
+    pub topology_key: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinity {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferredDuringSchedulingIgnoredDuringExecution")]
+    pub preferred_during_scheduling_ignored_during_execution: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecution>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "requiredDuringSchedulingIgnoredDuringExecution")]
+    pub required_during_scheduling_ignored_during_execution: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecution>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecution {
+    #[serde(rename = "podAffinityTerm")]
+    pub pod_affinity_term: ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTerm,
+    pub weight: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTerm {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
+    pub label_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
+    pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub namespaces: Option<Vec<String>>,
+    #[serde(rename = "topologyKey")]
+    pub topology_key: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecution {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
+    pub label_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
+    pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub namespaces: Option<Vec<String>>,
+    #[serde(rename = "topologyKey")]
+    pub topology_key: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelector {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchExpressions")]
+    pub match_expressions: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelectorMatchExpressions>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabels")]
+    pub match_labels: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelectorMatchExpressions {
+    pub key: String,
+    pub operator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecImagePullSecrets {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContext {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "fsGroup")]
+    pub fs_group: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "fsGroupChangePolicy")]
+    pub fs_group_change_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "runAsGroup")]
+    pub run_as_group: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "runAsNonRoot")]
+    pub run_as_non_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "runAsUser")]
+    pub run_as_user: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "seLinuxOptions")]
+    pub se_linux_options: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContextSeLinuxOptions>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "seccompProfile")]
+    pub seccomp_profile: Option<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContextSeccompProfile>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "supplementalGroups")]
+    pub supplemental_groups: Option<Vec<i64>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sysctls: Option<Vec<ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContextSysctls>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContextSeLinuxOptions {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
+    pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContextSeccompProfile {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "localhostProfile")]
+    pub localhost_profile: Option<String>,
+    #[serde(rename = "type")]
+    pub r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecSecurityContextSysctls {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01GatewayHttpRoutePodTemplateSpecTolerations {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operator: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "tolerationSeconds")]
+    pub toleration_seconds: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerAcmeSolversHttp01Ingress {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub class: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "ingressClassName")]
+    pub ingress_class_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "ingressTemplate")]
     pub ingress_template: Option<ClusterIssuerAcmeSolversHttp01IngressIngressTemplate>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -406,10 +837,14 @@ pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateMetadata {
 pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub affinity: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinity>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "imagePullSecrets")]
+    pub image_pull_secrets: Option<Vec<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecImagePullSecrets>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeSelector")]
     pub node_selector: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "priorityClassName")]
     pub priority_class_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "securityContext")]
+    pub security_context: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContext>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "serviceAccountName")]
     pub service_account_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -513,6 +948,10 @@ pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffini
 pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTerm {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
     pub label_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
     pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelector>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -557,6 +996,10 @@ pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffini
 pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecution {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
     pub label_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
     pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelector>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -616,6 +1059,10 @@ pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAf
 pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTerm {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
     pub label_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
     pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAffinityPreferredDuringSchedulingIgnoredDuringExecutionPodAffinityTermNamespaceSelector>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -660,6 +1107,10 @@ pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAf
 pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecution {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "labelSelector")]
     pub label_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionLabelSelector>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "matchLabelKeys")]
+    pub match_label_keys: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mismatchLabelKeys")]
+    pub mismatch_label_keys: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "namespaceSelector")]
     pub namespace_selector: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAffinityRequiredDuringSchedulingIgnoredDuringExecutionNamespaceSelector>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -701,6 +1152,60 @@ pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecAffinityPodAntiAf
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecImagePullSecrets {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContext {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "fsGroup")]
+    pub fs_group: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "fsGroupChangePolicy")]
+    pub fs_group_change_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "runAsGroup")]
+    pub run_as_group: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "runAsNonRoot")]
+    pub run_as_non_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "runAsUser")]
+    pub run_as_user: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "seLinuxOptions")]
+    pub se_linux_options: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContextSeLinuxOptions>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "seccompProfile")]
+    pub seccomp_profile: Option<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContextSeccompProfile>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "supplementalGroups")]
+    pub supplemental_groups: Option<Vec<i64>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sysctls: Option<Vec<ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContextSysctls>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContextSeLinuxOptions {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
+    pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContextSeccompProfile {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "localhostProfile")]
+    pub localhost_profile: Option<String>,
+    #[serde(rename = "type")]
+    pub r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecSecurityContextSysctls {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerAcmeSolversHttp01IngressPodTemplateSpecTolerations {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<String>,
@@ -728,6 +1233,8 @@ pub struct ClusterIssuerAcmeSolversSelector {
 pub struct ClusterIssuerCa {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "crlDistributionPoints")]
     pub crl_distribution_points: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "issuingCertificateURLs")]
+    pub issuing_certificate_ur_ls: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "ocspServers")]
     pub ocsp_servers: Option<Vec<String>>,
     #[serde(rename = "secretName")]
@@ -747,6 +1254,10 @@ pub struct ClusterIssuerVault {
     pub ca_bundle: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "caBundleSecretRef")]
     pub ca_bundle_secret_ref: Option<ClusterIssuerVaultCaBundleSecretRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "clientCertSecretRef")]
+    pub client_cert_secret_ref: Option<ClusterIssuerVaultClientCertSecretRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "clientKeySecretRef")]
+    pub client_key_secret_ref: Option<ClusterIssuerVaultClientKeySecretRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub namespace: Option<String>,
     pub path: String,
@@ -757,6 +1268,8 @@ pub struct ClusterIssuerVault {
 pub struct ClusterIssuerVaultAuth {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "appRole")]
     pub app_role: Option<ClusterIssuerVaultAuthAppRole>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "clientCertificate")]
+    pub client_certificate: Option<ClusterIssuerVaultAuthClientCertificate>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kubernetes: Option<ClusterIssuerVaultAuthKubernetes>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "tokenSecretRef")]
@@ -780,18 +1293,37 @@ pub struct ClusterIssuerVaultAuthAppRoleSecretRef {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerVaultAuthClientCertificate {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mountPath")]
+    pub mount_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "secretName")]
+    pub secret_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerVaultAuthKubernetes {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "mountPath")]
     pub mount_path: Option<String>,
     pub role: String,
-    #[serde(rename = "secretRef")]
-    pub secret_ref: ClusterIssuerVaultAuthKubernetesSecretRef,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "secretRef")]
+    pub secret_ref: Option<ClusterIssuerVaultAuthKubernetesSecretRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "serviceAccountRef")]
+    pub service_account_ref: Option<ClusterIssuerVaultAuthKubernetesServiceAccountRef>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerVaultAuthKubernetesSecretRef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerVaultAuthKubernetesServiceAccountRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audiences: Option<Vec<String>>,
     pub name: String,
 }
 
@@ -804,6 +1336,20 @@ pub struct ClusterIssuerVaultAuthTokenSecretRef {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerVaultCaBundleSecretRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerVaultClientCertSecretRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerVaultClientKeySecretRef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
     pub name: String,
@@ -837,9 +1383,18 @@ pub struct ClusterIssuerVenafiCloudApiTokenSecretRef {
 pub struct ClusterIssuerVenafiTpp {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "caBundle")]
     pub ca_bundle: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "caBundleSecretRef")]
+    pub ca_bundle_secret_ref: Option<ClusterIssuerVenafiTppCaBundleSecretRef>,
     #[serde(rename = "credentialsRef")]
     pub credentials_ref: ClusterIssuerVenafiTppCredentialsRef,
     pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct ClusterIssuerVenafiTppCaBundleSecretRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -857,6 +1412,8 @@ pub struct ClusterIssuerStatus {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ClusterIssuerStatusAcme {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastPrivateKeyHash")]
+    pub last_private_key_hash: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastRegisteredEmail")]
     pub last_registered_email: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

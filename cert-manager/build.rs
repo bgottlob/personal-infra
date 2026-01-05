@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -22,7 +23,10 @@ fn main() -> anyhow::Result<()> {
         File::create(out_path.join("helm-output.yaml"))?
     );
 
-    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, None, None, out_path)?;
+    let values = HashMap::from([
+        ("crds.enabled", "true")
+    ]);
+    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(CHART_NAME), Some(values), None, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
 }
