@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-const CHART_VERSION: &str = "v1.12.17";
+const CHART_VERSION: &str = "v1.17.4";
 const REPO_NAME: &str = "jetstack";
 const REPO_URL: &str = "https://charts.jetstack.io";
 const CHART_NAME: &str = "cert-manager";
