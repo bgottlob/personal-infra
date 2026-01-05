@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use k8s_openapi::{api::{apps::v1::Deployment, core::v1::{ResourceRequirements, Service}, networking::v1::Ingress}, apimachinery::pkg::api::resource::Quantity};
+use k8s_openapi::{api::{apps::v1::Deployment, core::v1::Service, networking::v1::Ingress}, apimachinery::pkg::api::resource::Quantity};
 use kube_builder::prelude::*;
 
 const NAME: &str = "blog";
@@ -13,26 +13,23 @@ fn labels() -> BTreeMap<String, String> {
 }
 
 fn create_deployment() -> anyhow::Result<Deployment> {
+    let image = format!("{}/{}:{}", env!("REGISTRY_SERVER"), NAME, IMAGE_TAG);
+    let memory = Quantity(String::from("8Mi"));
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(image)
+        .container_port(80, "app", PortProtocol::TCP)
+        .cpu_request(Quantity(String::from("5m")))
+        .cpu_limit(Quantity(String::from("100m")))
+        .memory_request(memory.clone())
+        .memory_limit(memory)
+        .build()?;
+
     DeploymentBuilder::new()
         .replicas(1)
         .name(NAME)
+        .container(container)
         .selector_match_labels(labels())
-        .container(
-            NAME,
-            format!("{}/{}:{}", env!("REGISTRY_SERVER"), NAME, IMAGE_TAG),
-            "app",
-            80,
-            PortProtocol::TCP,
-            Vec::new(),
-            None,
-            Some(ResourceRequirements {
-                requests: Some(BTreeMap::from([
-                    (String::from("cpu"), Quantity(String::from("10m"))),
-                    (String::from("memory"), Quantity(String::from("15Mi"))),
-                ])),
-                ..Default::default()
-            })
-        )
         .use_private_registry()
         .build()
 }
