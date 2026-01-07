@@ -7,7 +7,7 @@ fn main() {
 
     let example_secret = "example";
     println!(
-        "cargo:rustc-env=POSTGRES_USERNAME={}",
+        "cargo:rustc-env=EXAMPLE_SECRET={}",
         example_secret,
     );
     {% if use_postgres %}
