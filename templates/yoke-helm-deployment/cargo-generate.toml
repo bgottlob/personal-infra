@@ -1,0 +1,9 @@
+[template]
+cargo_generate_version = ">=0.23.0"
+
+[placeholders]
+chart_name = { prompt = "Name of the Helm chart:", type = "string" }
+chart_repo_name = { prompt = "Name of the Helm repo", type = "string" }
+chart_repo_url = { prompt = "URL to the Helm repo", type = "string" }
+chart_version = { prompt = "Version of the Helm chart:", type = "string" }
+namespace = { prompt = "Kubernetes namespace to deploy to:", type = "string" }
