@@ -1,3 +1,4 @@
+use k8s_gateway_api::prelude::HTTPRoute;
 use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
@@ -5,7 +6,6 @@ use std::collections::BTreeMap;
 use k8s_openapi::{api::{
     apps::v1::Deployment,
     core::v1::{PersistentVolumeClaim, Service, VolumeMount},
-    networking::v1::Ingress,
 }, apimachinery::pkg::api::resource::Quantity};
 
 const NAME: &str = "rmfakecloud";
@@ -62,14 +62,12 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
-        .annotation("nginx.ingress.kubernetes.io/proxy-body-size", "500m")
-        .ingress_class_name("nginx")
-        .tls_host(HOSTNAME, NAME)
-        .rule(HOSTNAME, "/", "Prefix", NAME, 80)
+        .service_port_backend_rule(NAME, 80)
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
         .build()
 }
 
@@ -84,13 +82,13 @@ fn create_pvc() -> anyhow::Result<PersistentVolumeClaim> {
 fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let service = create_service()?;
-    let ingress = create_ingress()?;
+    let route = create_route()?;
     let pvc = create_pvc()?;
 
     let resources = vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
-        serde_json::value::to_value(ingress)?,
+        serde_json::value::to_value(route)?,
         serde_json::value::to_value(pvc)?,
     ];
     println!("{}", serde_json::to_string(&resources).unwrap());

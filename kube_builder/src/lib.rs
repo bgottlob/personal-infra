@@ -1,5 +1,6 @@
 pub mod container;
 pub mod deployment;
+pub mod http_route;
 pub mod ingress;
 pub mod persistent_volume_claim;
 pub mod secret;
@@ -9,11 +10,12 @@ pub mod tailscale;
 pub mod prelude {
     pub use crate::container::*;
     pub use crate::deployment::*;
+    pub use crate::http_route::*;
     pub use crate::ingress::*;
+    pub use crate::persistent_volume_claim::*;
     pub use crate::secret::*;
     pub use crate::service::*;
     pub use crate::tailscale;
-    pub use crate::persistent_volume_claim::*;
     pub use crate::PortProtocol;
 }
 

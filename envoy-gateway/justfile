@@ -1,5 +1,5 @@
-name  := "ingress-nginx"
-default_flags := "-namespace default -create-namespace"
+name := "envoy-gateway"
+default_flags := "-namespace envoy-gateway-system -create-namespace"
 
 takeoff extra_flags="":
 	cargo build --target=wasm32-wasip1 --release

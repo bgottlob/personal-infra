@@ -1,3 +1,4 @@
+use k8s_gateway_api::prelude::HTTPRoute;
 use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
@@ -5,7 +6,6 @@ use std::collections::BTreeMap;
 use k8s_openapi::{api::{
     apps::v1::Deployment,
     core::v1::{PersistentVolumeClaim, Service, VolumeMount},
-    networking::v1::Ingress,
 }, apimachinery::pkg::api::resource::Quantity};
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 
@@ -91,27 +91,26 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
-        .ingress_class_name("nginx")
-        .tls_host(HOSTNAME, NAME)
-        .rule(HOSTNAME, "/", "Prefix", NAME, PORT)
+        .service_port_backend_rule(NAME, 80)
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
         .build()
 }
 
 fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let service = create_service()?;
-    let ingress = create_ingress()?;
+    let route = create_route()?;
     let library_pvc = create_library_pvc()?;
     let config_pvc = create_config_pvc()?;
 
     let resources = vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
-        serde_json::value::to_value(ingress)?,
+        serde_json::value::to_value(route)?,
         serde_json::value::to_value(library_pvc)?,
         serde_json::value::to_value(config_pvc)?,
     ];

@@ -73,6 +73,7 @@
             kopium
             cargo-generate
             s3cmd
+            egctl
           ];
           nativeBuildInputs = [rust];
         };

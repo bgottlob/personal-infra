@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
-use k8s_openapi::{api::{apps::v1::Deployment, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}, networking::v1::Ingress}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
+use k8s_gateway_api::prelude::HTTPRoute;
+use k8s_openapi::{api::{apps::v1::Deployment, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
 use kube::core::ObjectMeta;
 use kube_builder::prelude::*;
 use serde_json::json;
@@ -84,13 +85,12 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .ingress_class_name("nginx")
-        .tls_host("grafana.bgottlob.com", NAME)
-        .rule("grafana.bgottlob.com", "/", "Prefix", NAME, 3000)
-        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .service_port_backend_rule(NAME, 80)
+        .hostname("grafana.bgottlob.com")
         .build()
 }
 
@@ -137,19 +137,19 @@ fn main() -> anyhow::Result<()> {
 
     let pvc = create_pvc()?;
     let svc = create_service()?;
-    let ing = create_ingress()?;
+    let route = create_route()?;
     let deployment = create_deployment()?;
     let cm = create_configmap()?;
 
     let pvc_value = serde_json::to_value(&pvc)?;
     let svc_value = serde_json::to_value(&svc)?;
-    let ing_value = serde_json::to_value(&ing)?;
+    let route_value = serde_json::to_value(&route)?;
     let deployment_value = serde_json::to_value(&deployment)?;
     let cm_value = serde_json::to_value(&cm)?;
 
     resources.push(pvc_value);
     resources.push(svc_value);
-    resources.push(ing_value);
+    resources.push(route_value);
     resources.push(deployment_value);
     resources.push(cm_value);
 

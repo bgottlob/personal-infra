@@ -1,3 +1,4 @@
+use k8s_gateway_api::prelude::*;
 use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
@@ -73,13 +74,12 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_http_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
-        .ingress_class_name("nginx")
-        .tls_host(HOSTNAME, NAME)
-        .rule(HOSTNAME, "/", "Prefix", NAME, PORT)
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname("wallabag.bgottlob.com")
+        .service_port_backend_rule(NAME, PORT)
         .build()
 }
 
@@ -87,13 +87,14 @@ fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let service = create_service()?;
     let secret = create_secret()?;
-    let ingress = create_ingress()?;
+
+    let route = create_http_route()?;
 
     let resources = vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
         serde_json::value::to_value(secret)?,
-        serde_json::value::to_value(ingress)?,
+        serde_json::value::to_value(route)?,
     ];
     println!("{}", serde_json::to_string(&resources).unwrap());
     Ok(())

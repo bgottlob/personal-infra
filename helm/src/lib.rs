@@ -42,14 +42,20 @@ pub fn add_repo(name: &str, url: &str) {
     }
 }
 
-pub fn pull(repo_name: &str, chart_name: &str, chart_version: &str, destination: &Path) -> anyhow::Result<()> {
+pub fn pull(repo_name: Option<&str>, chart_name: &str, chart_version: &str, destination: &Path) -> anyhow::Result<()> {
     let destination_str = destination.to_str().ok_or(format_err!("destination path should convert to str"))?;
-    let status = Command::new("helm")
-        .arg("pull")
-        .arg(format!("{}/{}", repo_name, chart_name))
-        .args(["--version", chart_version])
-        .args(["--destination", destination_str])
-        .status()?;
+    let mut cmd = Command::new("helm");
+    cmd.arg("pull");
+
+    if let Some(repo_name) = repo_name {
+        cmd.arg(format!("{}/{}", repo_name, chart_name));
+    } else {
+        cmd.arg(chart_name);
+    }
+
+    cmd.args(["--version", chart_version]);
+    cmd.args(["--destination", destination_str]);
+    let status = cmd.status()?;
 
     if status.success() {
         Ok(())
@@ -60,7 +66,6 @@ pub fn pull(repo_name: &str, chart_name: &str, chart_version: &str, destination:
 }
 
 pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_name: Option<&str>, set_values: Option<HashMap<&str, &str>>, values_file: Option<&Path>, source_dir: &Path) -> anyhow::Result<String> {
-    let path = source_dir.join(format!("{}-{}.tgz", chart_name, chart_version));
     let mut cmd = Command::new("helm");
     cmd.arg("template");
 
@@ -69,7 +74,14 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_
     }
 
     cmd.args(["--namespace", namespace]);
-    cmd.arg(path.to_str().unwrap());
+    if chart_name.starts_with("oci://") {
+        cmd.arg(chart_name);
+    } else {
+        let chart_path = format!("{}-{}.tgz", chart_name, chart_version);
+        // TODO fix unwrap
+        let chart_path = source_dir.join(chart_path);
+        cmd.arg(chart_path);
+    }
 
     set_values.unwrap_or_default().iter().for_each(|(key, val)| {
         cmd.args(["--set", format!("{}={}", key, val).as_str()]);

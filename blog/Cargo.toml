@@ -11,6 +11,7 @@ serde_json = "1.0.145"
 serde_norway = "0.9.42"
 kube-builder = { path = "../kube_builder" }
 base64 = "0.22.1"
+k8s-gateway-api = { path = "../k8s-gateway-api" }
 
 [build-dependencies]
 secrets = { path = "../secrets" }

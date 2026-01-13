@@ -2,13 +2,13 @@ use kube_builder::prelude::*;
 use std::collections::BTreeMap;
 
 use k8s_openapi::{
-    api::{apps::v1::Deployment, core::v1::{ResourceRequirements, Secret, ServiceAccount}, rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject}},
+    api::{apps::v1::Deployment, core::v1::{Secret, ServiceAccount}, rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject}},
     apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::ObjectMeta},
 };
 
 const NAME: &str = "external-dns";
 const IMAGE: &str = "registry.k8s.io/external-dns/external-dns";
-const VERSION: &str = "v0.15.1";
+const VERSION: &str = "v0.20.0";
 const LINODE_SECRET_NAME: &str = "linode";
 const NAMESPACE: &str = "external-dns";
 
@@ -23,42 +23,36 @@ fn create_deploy() -> anyhow::Result<Deployment> {
     let mut labels: BTreeMap<String, String> = BTreeMap::new();
     labels.insert(String::from("app"), String::from(NAME));
 
-    let env = EnvBuilder::new()
+    let memory = Quantity(String::from("64Mi"));
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(format!("{}:{}", IMAGE, VERSION))
         .env_from_secret("LINODE_TOKEN", LINODE_SECRET_NAME, "token")
-        .build();
+        .cpu_request(Quantity(String::from("5m")))
+        .cpu_limit(Quantity(String::from("200m")))
+        .memory_request(memory.clone())
+        .memory_limit(memory.clone())
+        .args(vec![
+            String::from("--source=ingress"),
+            String::from("--domain-filter=bgottlob.com"),
+            String::from("--provider=linode"),
+            String::from("--registry=txt"),
+            String::from("--txt-owner-id=bgottlob-k8s"),
+            String::from("--txt-prefix=external-dns-"),
+            String::from("--source=gateway-httproute"),
+            String::from("--source=gateway-grpcroute"),
+            String::from("--source=gateway-tlsroute"),
+            String::from("--source=gateway-tcproute"),
+            String::from("--source=gateway-udproute"),
+        ])
+        .build()?;
 
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
         .selector_match_labels(labels.clone())
         .pod_labels(labels.clone())
-        .container(
-            NAME,
-            format!("{}:{}", IMAGE, VERSION),
-            "http",
-            80, // TODO this doesn't actually need a port
-            PortProtocol::TCP,
-            env,
-            None,
-            Some(
-                ResourceRequirements {
-                    requests: Some(BTreeMap::from([
-                        (String::from("cpu"), Quantity(String::from("25m"))),
-                        (String::from("memory"), Quantity(String::from("128Mi"))),
-                    ])),
-                    ..Default::default()
-                }
-            ),
-            None,
-            Some(vec![
-                String::from("--source=ingress"),
-                String::from("--domain-filter=bgottlob.com"),
-                String::from("--provider=linode"),
-                String::from("--registry=txt"),
-                String::from("--txt-owner-id=bgottlob-k8s"),
-                String::from("--txt-prefix=external-dns-"),
-            ])
-        )
+        .container(container)
         .build()
 }
 
@@ -109,6 +103,53 @@ fn create_rbac() -> (ClusterRole, ClusterRoleBinding, ServiceAccount) {
                    String::from("nodes"),
                ]),
                verbs: vec![
+                   String::from("list"),
+               ],
+               ..Default::default()
+           },
+           PolicyRule {
+               api_groups: Some(vec![
+                   String::from("discovery.k8s.io"),
+               ]),
+               resources: Some(vec![
+                   String::from("endpointslices"),
+               ]),
+               verbs: vec![
+                   String::from("get"),
+                   String::from("watch"),
+                   String::from("list"),
+               ],
+               ..Default::default()
+           },
+           PolicyRule {
+               api_groups: Some(vec![
+                   String::from(""),
+               ]),
+               resources: Some(vec![
+                   String::from("namespaces"),
+               ]),
+               verbs: vec![
+                   String::from("get"),
+                   String::from("watch"),
+                   String::from("list"),
+               ],
+               ..Default::default()
+           },
+           PolicyRule {
+               api_groups: Some(vec![
+                   String::from("gateway.networking.k8s.io"),
+               ]),
+               resources: Some(vec![
+                   String::from("gateways"),
+                   String::from("httproutes"),
+                   String::from("grpcroutes"),
+                   String::from("tlsroutes"),
+                   String::from("tcproutes"),
+                   String::from("udproutes"),
+               ]),
+               verbs: vec![
+                   String::from("get"),
+                   String::from("watch"),
                    String::from("list"),
                ],
                ..Default::default()

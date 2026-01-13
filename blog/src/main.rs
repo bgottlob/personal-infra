@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
-use k8s_openapi::{api::{apps::v1::Deployment, core::v1::Service, networking::v1::Ingress}, apimachinery::pkg::api::resource::Quantity};
+use k8s_gateway_api::prelude::HTTPRoute;
+use k8s_openapi::{api::{apps::v1::Deployment, core::v1::Service}, apimachinery::pkg::api::resource::Quantity};
 use kube_builder::prelude::*;
 
 const NAME: &str = "blog";
@@ -42,19 +43,19 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .ingress_class_name("nginx")
-        .rule("bgottlob.com", "/", "Prefix", NAME, 80)
-        .tls_host("bgottlob.com", NAME)
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .service_port_backend_rule(NAME, 80)
+        .hostname("bgottlob.com")
         .build()
 }
 
 fn main() -> anyhow::Result<()> {
     let deploy = create_deployment()?;
     let service = create_service()?;
-    let ingress = create_ingress()?;
+    let route = create_route()?;
     let docker_secret = docker_registry_secret(
         env!("REGISTRY_SERVER").into(),
         env!("REGISTRY_USERNAME").into(),
@@ -66,7 +67,7 @@ fn main() -> anyhow::Result<()> {
         serde_json::value::to_value(docker_secret)?,
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
-        serde_json::value::to_value(ingress)?,
+        serde_json::value::to_value(route)?,
     ];
     println!("{}", serde_json::to_string(&resources)?);
     Ok(())

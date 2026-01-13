@@ -1,3 +1,4 @@
+use k8s_gateway_api::prelude::HTTPRoute;
 use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
@@ -5,7 +6,6 @@ use std::collections::BTreeMap;
 use k8s_openapi::{api::{
     apps::v1::Deployment,
     core::v1::{ConfigMap, Secret, Service, VolumeMount},
-    networking::v1::Ingress,
 }, apimachinery::pkg::{apis::meta::v1::ObjectMeta}};
 
 const NAME: &str = "registry";
@@ -25,41 +25,36 @@ fn labels() -> BTreeMap<String, String> {
 }
 
 fn create_deploy() -> anyhow::Result<Deployment> {
-    let env = EnvBuilder::new()
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(format!("{}:{}", IMAGE, VERSION))
+        .container_port(PORT, "app", PortProtocol::TCP)
         .env_from_secret("REGISTRY_STORAGE_S3_ACCESSKEY", S3_SECRET_NAME, "accesskey")
         .env_from_secret("REGISTRY_STORAGE_S3_SECRETKEY", S3_SECRET_NAME, "secretkey")
-        .build();
+        .volume_mount(
+            VolumeMount {
+                name: String::from("registry-config"),
+                mount_path: String::from("/etc/docker/registry"),
+                read_only: Some(true),
+                ..Default::default()
+            },
+        )
+        .volume_mount(
+            VolumeMount {
+                name: String::from("registry-htpasswd-secret"),
+                mount_path: String::from("/auth"),
+                read_only: Some(true),
+                ..Default::default()
+            }
+        )
+        .build()?;
 
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
         .selector_match_labels(labels())
         .pod_labels(labels())
-        .container(
-            NAME,
-            format!("{}:{}", IMAGE, VERSION),
-            "app",
-            PORT,
-            PortProtocol::TCP,
-            env,
-            None,
-            None,
-            Some(vec![
-                VolumeMount {
-                    name: String::from("registry-config"),
-                    mount_path: String::from("/etc/docker/registry"),
-                    read_only: Some(true),
-                    ..Default::default()
-                },
-                VolumeMount {
-                    name: String::from("registry-htpasswd-secret"),
-                    mount_path: String::from("/auth"),
-                    read_only: Some(true),
-                    ..Default::default()
-                }
-            ]),
-            None,
-        )
+        .container(container)
         .volume_from_configmap("registry-config", CONFIGMAP_NAME, "config.yml", "config.yml")
         .volume_from_secret("registry-htpasswd-secret", AUTH_SECRET_NAME)
         .build()
@@ -102,24 +97,19 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
-        // Allows images of any size to be uploaded
-        .annotation("nginx.ingress.kubernetes.io/proxy-body-size", "0")
-        .annotation("nginx.ingress.kubernetes.io/proxy-read-timeout", "6000")
-        .annotation("nginx.ingress.kubernetes.io/proxy-send-timeout", "6000")
-        .ingress_class_name("nginx")
-        .tls_host(HOSTNAME, NAME)
-        .rule(HOSTNAME, "/", "Prefix", NAME, 80)
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
+        .service_port_backend_rule(NAME, 80)
         .build()
 }
 
 fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let service = create_service()?;
-    let ingress = create_ingress()?;
+    let route = create_route()?;
     let s3_secret = create_s3_secret()?;
     let auth_secret = create_auth_secret()?;
     let configmap = create_configmap();
@@ -127,7 +117,7 @@ fn main() -> anyhow::Result<()> {
     let resources = vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
-        serde_json::value::to_value(ingress)?,
+        serde_json::value::to_value(route)?,
         serde_json::value::to_value(s3_secret)?,
         serde_json::value::to_value(auth_secret)?,
         serde_json::value::to_value(configmap)?,

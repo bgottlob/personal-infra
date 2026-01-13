@@ -1,11 +1,11 @@
+use k8s_gateway_api::prelude::HTTPRoute;
 use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
 
 use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{ResourceRequirements, Secret, Service},
-    networking::v1::Ingress,
+    core::v1::{Secret, Service},
 }, apimachinery::pkg::api::resource::Quantity};
 
 const PG_HOST: &str = "main-db-rw.main-db";
@@ -28,35 +28,27 @@ fn labels() -> BTreeMap<String, String> {
 }
 
 fn create_deploy() -> anyhow::Result<Deployment> {
-    let env = EnvBuilder::new()
+    let container = ContainerBuilder::new()
+        .name(NAME)
+        .image(format!("{}:{}", IMAGE, VERSION))
         .env("RUN_MIGRATIONS", "1")
         .env("CREATE_ADMIN", "1")
         .env_from_secret("DATABASE_URL", DATABASE_SECRET, "database_url")
         .env_from_secret("ADMIN_USERNAME", ADMIN_SECRET, "username")
         .env_from_secret("ADMIN_PASSWORD", ADMIN_SECRET, "password")
-        .build();
+        .container_port(PORT, "app", PortProtocol::TCP)
+        .cpu_request(Quantity(String::from("50m")))
+        .cpu_limit(Quantity(String::from("500m")))
+        .memory_request(Quantity(String::from("128Mi")))
+        .memory_limit(Quantity(String::from("128Mi")))
+        .build()?;
 
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
         .selector_match_labels(labels())
         .pod_labels(labels())
-        .container(
-            NAME,
-            format!("{}:{}", IMAGE, VERSION),
-            "app",
-            PORT,
-            PortProtocol::TCP,
-            env,
-            None,
-            Some(ResourceRequirements {
-                requests: Some(BTreeMap::from([
-                    (String::from("cpu"), Quantity(String::from("50m"))),
-                    (String::from("memory"), Quantity(String::from("128Mi")))
-                ])),
-                ..Default::default()
-            })
-        )
+        .container(container)
         .build()
 }
 
@@ -92,13 +84,12 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
-fn create_ingress() -> anyhow::Result<Ingress> {
-    IngressBuilder::new()
+fn create_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
         .name(NAME)
-        .annotation("cert-manager.io/cluster-issuer", "letsencrypt-prod")
-        .ingress_class_name("nginx")
-        .tls_host(HOSTNAME, NAME)
-        .rule(HOSTNAME, "/", "Prefix", NAME, PORT)
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
+        .service_port_backend_rule(NAME, 80)
         .build()
 }
 
@@ -107,14 +98,14 @@ fn main() -> anyhow::Result<()> {
     let service = create_service()?;
     let secret = create_secret()?;
     let admin_secret = create_admin_secret()?;
-    let ingress = create_ingress()?;
+    let route = create_route()?;
 
     let resources = vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
         serde_json::value::to_value(secret)?,
         serde_json::value::to_value(admin_secret)?,
-        serde_json::value::to_value(ingress)?,
+        serde_json::value::to_value(route)?,
     ];
     println!("{}", serde_json::to_string(&resources).unwrap());
     Ok(())

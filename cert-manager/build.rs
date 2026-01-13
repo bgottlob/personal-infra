@@ -17,17 +17,19 @@ fn main() -> anyhow::Result<()> {
     let out_dir = env::var("OUT_DIR")?;
     let out_path = Path::new(&out_dir);
 
-    helm::pull(REPO_NAME, CHART_NAME, CHART_VERSION, out_path)?;
+    helm::pull(Some(REPO_NAME), CHART_NAME, CHART_VERSION, out_path)?;
 
     let mut file = BufWriter::new(
         File::create(out_path.join("helm-output.yaml"))?
     );
 
     let values = HashMap::from([
-        ("crds.enabled", "true")
+        ("crds.enabled", "true"),
+        ("config.apiVersion", "controller.config.cert-manager.io/v1alpha1"),
+        ("config.kind", "ControllerConfiguration"),
+        ("config.enableGatewayAPI", "true"),
     ]);
     let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(CHART_NAME), Some(values), None, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
 }
-
