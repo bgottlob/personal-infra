@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-const CHART_VERSION: &str = "v1.6.1";
+const CHART_VERSION: &str = "v1.6.2";
 const NAMESPACE: &str = "envoy-gateway-system";
 const MAIN_CHART_URL: &str = "oci://docker.io/envoyproxy/gateway-helm";
 const CRDS_CHART_URL: &str = "oci://docker.io/envoyproxy/gateway-crds-helm";
@@ -14,6 +14,20 @@ const GATEWAY_CONTROLLER_NAME: &str = "gateway.envoyproxy.io/public-controller";
 
 fn create_main_values_file(out_path: &Path) -> anyhow::Result<String> {
     let values = json!({
+        "deployment": {
+            "envoyGateway": {
+                "resources": {
+                    "requests": {
+                        "cpu": "100m",
+                        "memory": "128Mi",
+                    },
+                    "limits": {
+                        "cpu": "500m",
+                        "memory": "512Mi"
+                    },
+                },
+            }
+        },
         "config": {
             "envoyGateway": {
                 "gateway": {
