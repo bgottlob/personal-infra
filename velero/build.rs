@@ -69,7 +69,12 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
         "nodeAgent": {
             "resources": {
                 "requests": {
-                    "cpu": "100m",
+                    "cpu": "5m",
+                    "memory": "100Mi"
+                },
+                "limits": {
+                    "cpu": "500m",
+                    "memory": "512Mi"
                 },
             },
         },
@@ -92,7 +97,7 @@ fn main() -> anyhow::Result<()> {
     let secrets = secrets::decrypt_parse_secrets(&secrets_path)
         .unwrap_or_else(|_| panic!("Should parse {} file into Secrets struct", secrets_path));
 
-    helm::pull(REPO_NAME, CHART_NAME, CHART_VERSION, out_path)?;
+    helm::pull(Some(REPO_NAME), CHART_NAME, CHART_VERSION, out_path)?;
 
     let mut out_file = BufWriter::new(
         File::create(out_path.join("helm-output.yaml"))?
