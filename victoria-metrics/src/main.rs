@@ -13,6 +13,7 @@ use vm::vm_single::*;
 use crate::vm::vm_pod_scrape::VMPodScrape;
 
 fn create_vm() -> VMSingle {
+    let memory = IntOrString::String(String::from("350Mi"));
     VMSingle {
         metadata: ObjectMeta {
             name: Some(String::from("main")),
@@ -21,12 +22,12 @@ fn create_vm() -> VMSingle {
         spec: VmSingleSpec {
             resources: Some(VmSingleResources {
                 requests: Some(BTreeMap::from([
-                                  (String::from("cpu"), IntOrString::String(String::from("100m"))),
-                                  (String::from("memory"), IntOrString::String(String::from("128Mi"))),
+                    (String::from("cpu"), IntOrString::String(String::from("100m"))),
+                    (String::from("memory"), memory.clone()),
                 ])),
                 limits: Some(BTreeMap::from([
-                        (String::from("cpu"), IntOrString::String(String::from("1000m"))),
-                        (String::from("memory"), IntOrString::String(String::from("500Mi"))),
+                    (String::from("cpu"), IntOrString::String(String::from("1000m"))),
+                    (String::from("memory"), memory),
                 ])),
                 ..Default::default()
             }),
