@@ -15,30 +15,58 @@ const S3_CREDS_SECRET_NAME: &str = "backup-s3-creds";
 const OBJECT_STORE_NAME: &str = "linode-store";
 const BARMAN_PLUGIN_NAME: &str = "barman-cloud.cloudnative-pg.io";
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(long, default_value_t = false)]
+    restore: bool,
+}
+
 fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    let is_restore = args.restore;
     let mut resources = Vec::new();
-    resources.push(serde_json::to_value(create_app_user_secret())?);
-    resources.push(serde_json::to_value(create_super_user_secret())?);
-    resources.push(serde_json::to_value(create_s3_secret())?);
-    resources.push(serde_json::to_value(create_image_catalog())?);
-    resources.push(serde_json::to_value(create_database_cluster())?);
-    resources.push(serde_json::to_value(create_scheduled_backup())?);
-    resources.push(serde_json::to_value(create_object_store())?);
 
-    resources.push(serde_json::to_value(create_database(
-        String::from("wallabag"), String::from(env!("APP_USER_USERNAME")),
-    ))?);
+    resources.push(serde_json::to_value(create_database_cluster(is_restore))?);
+    resources.push(serde_json::to_value(create_scheduled_backup(is_restore))?);
 
-    resources.push(serde_json::to_value(create_database(
-        String::from("vikunja"), String::from(env!("APP_USER_USERNAME")),
-    ))?);
+    if !is_restore {
+        resources.push(serde_json::to_value(create_app_user_secret())?);
+        resources.push(serde_json::to_value(create_super_user_secret())?);
+        resources.push(serde_json::to_value(create_s3_secret())?);
+        resources.push(serde_json::to_value(create_image_catalog())?);
+        resources.push(serde_json::to_value(create_object_store())?);
 
-    resources.push(serde_json::to_value(create_database(
-        String::from("miniflux"), String::from(env!("APP_USER_USERNAME")),
-    ))?);
+        resources.push(serde_json::to_value(create_database(
+                    String::from("wallabag"), String::from(env!("APP_USER_USERNAME")),
+        ))?);
+
+        resources.push(serde_json::to_value(create_database(
+                    String::from("vikunja"), String::from(env!("APP_USER_USERNAME")),
+        ))?);
+
+        resources.push(serde_json::to_value(create_database(
+                    String::from("miniflux"), String::from(env!("APP_USER_USERNAME")),
+        ))?);
+    }
+
 
     println!("{}", serde_json::to_string(&resources).unwrap());
     Ok(())
+}
+
+fn barman_plugin_params(is_restore: bool) -> BTreeMap<String, String> {
+    let mut server_name = CNPG_CLUSTER_NAME.to_string();
+    if is_restore {
+        server_name.push_str("-restore");
+    }
+
+    BTreeMap::from([
+        (String::from("barmanObjectName"), OBJECT_STORE_NAME.to_string()),
+        (String::from("serverName"), server_name),
+    ])
 }
 
 fn create_database(name: String, owner: String) -> Database {
@@ -151,9 +179,50 @@ fn create_object_store() -> ObjectStore {
     }
 }
 
-fn create_database_cluster() -> Cluster {
-    let name = String::from(CNPG_CLUSTER_NAME);
+fn create_database_cluster(is_restore: bool) -> Cluster {
+    let mut name = CNPG_CLUSTER_NAME.to_string();
+    if is_restore {
+        name.push_str("-restore");
+    }
     let pg_major_version = 18;
+
+    let bootstrap = if is_restore {
+        ClusterBootstrap {
+            recovery: Some(ClusterBootstrapRecovery {
+                source: Some(String::from("origin")),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    } else {
+        ClusterBootstrap {
+            initdb: Some(ClusterBootstrapInitdb {
+                database: Some(String::from("app")),
+                // TODO make this a var
+                owner: Some(String::from("app")),
+                secret: Some(ClusterBootstrapInitdbSecret {
+                    name: APP_USER_CREDS_SECRET_NAME.to_string(),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    };
+
+    let external_clusters = if is_restore {
+        Some(vec![ClusterExternalClusters {
+            name: String::from("origin"),
+            plugin: Some(ClusterExternalClustersPlugin {
+                name: BARMAN_PLUGIN_NAME.to_string(),
+                parameters: Some(barman_plugin_params(false)), // this should always be false to
+                                                               // restore from main-db
+                ..Default::default()
+            }),
+            ..Default::default()
+        }])
+    } else {
+        None
+    };
 
     Cluster {
         metadata: ObjectMeta {
@@ -170,19 +239,9 @@ fn create_database_cluster() -> Cluster {
                 major: pg_major_version,
             }),
 
-            bootstrap: Some(ClusterBootstrap {
+            bootstrap: Some(bootstrap),
 
-                initdb: Some(ClusterBootstrapInitdb {
-                    database: Some(String::from("app")),
-                    // TODO make this a var
-                    owner: Some(String::from("app")),
-                    secret: Some(ClusterBootstrapInitdbSecret {
-                        name: APP_USER_CREDS_SECRET_NAME.to_string(),
-                    }),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }),
+            external_clusters,
 
             storage: Some(ClusterStorage {
                 size: Some(String::from("20Gi")),
@@ -197,49 +256,9 @@ fn create_database_cluster() -> Cluster {
                      enabled: Some(true),
                      name: BARMAN_PLUGIN_NAME.to_string(),
                      is_wal_archiver: Some(true),
-                     parameters: Some(BTreeMap::from([
-                         (String::from("barmanObjectName"), OBJECT_STORE_NAME.to_string()),
-                     ])),
+                     parameters: Some(barman_plugin_params(is_restore)),
                  }
             ]),
-
-            /*
-            backup: Some(ClusterBackup {
-                retention_policy: Some(String::from("14d")),
-                barman_object_store: Some(ClusterBackupBarmanObjectStore {
-                    destination_path: String::from("s3:://bgottlob-db-backup/backups"),
-                    endpoint_url: Some(String::from("https://us-east-1.linodeobjects.com")),
-                    // For some reason, maybe due to Linode's limitations, I needed to
-                    // turn off encryption in data and wal to get this to work
-                    // https://github.com/cloudnative-pg/cloudnative-pg/discussions/4376#discussioncomment-11566074
-                    data: Some(ClusterBackupBarmanObjectStoreData {
-                        compression: Some(ClusterBackupBarmanObjectStoreDataCompression::Gzip),
-                        jobs: Some(2),
-                        encryption: None,
-                        ..Default::default()
-                    }),
-                    wal: Some(ClusterBackupBarmanObjectStoreWal {
-                        compression: Some(ClusterBackupBarmanObjectStoreWalCompression::Gzip),
-                        max_parallel: Some(1),
-                        encryption: None,
-                        ..Default::default()
-                    }),
-                    s3_credentials: Some(ClusterBackupBarmanObjectStoreS3Credentials {
-                        access_key_id: Some(ClusterBackupBarmanObjectStoreS3CredentialsAccessKeyId {
-                            name: String::from(S3_CREDS_SECRET_NAME),
-                            key: String::from("access_key_id")
-                        }),
-                        secret_access_key: Some(ClusterBackupBarmanObjectStoreS3CredentialsSecretAccessKey {
-                            name: String::from(S3_CREDS_SECRET_NAME),
-                            key: String::from("secret_key")
-                        }),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }),
-            */
 
             superuser_secret: Some(ClusterSuperuserSecret {
                 name: String::from(SUPER_USER_CREDS_SECRET_NAME),
@@ -251,10 +270,20 @@ fn create_database_cluster() -> Cluster {
     }
 }
 
-fn create_scheduled_backup() -> ScheduledBackup {
+fn create_scheduled_backup(is_restore: bool) -> ScheduledBackup {
+    let mut name = String::from("daily-backup");
+    if is_restore {
+        name.push_str("-restore");
+    }
+
+    let mut cluster_name = CNPG_CLUSTER_NAME.to_string();
+    if is_restore {
+        cluster_name.push_str("-restore");
+    }
+
     ScheduledBackup {
         metadata: ObjectMeta {
-            name: Some(String::from("daily-backup")),
+            name: Some(name),
             ..Default::default()
         },
         spec: ScheduledBackupSpec {
@@ -267,7 +296,7 @@ fn create_scheduled_backup() -> ScheduledBackup {
                 ..Default::default()
             }),
             cluster: ScheduledBackupCluster {
-                name: String::from(CNPG_CLUSTER_NAME),
+                name: cluster_name,
             },
             ..Default::default()
         },
