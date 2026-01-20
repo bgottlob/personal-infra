@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 
 use k8s_gateway_api::prelude::HTTPRoute;
-use k8s_openapi::{api::{apps::v1::Deployment, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}};
-use kube::core::ObjectMeta;
+use k8s_openapi::api::core::v1::{ConfigMapVolumeSource, KeyToPath, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Volume};
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::LabelSelector;
+use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}}; use kube::core::ObjectMeta;
 use kube_builder::prelude::*;
 use serde_json::json;
 
@@ -18,7 +19,7 @@ fn labels() -> BTreeMap<String, String> {
     ])
 }
 
-fn create_deployment() -> anyhow::Result<Deployment> {
+fn create_statefulset() -> anyhow::Result<StatefulSet> {
     let container = ContainerBuilder::new()
         .name(NAME)
         .image(format!("{}:{}", IMAGE, VERSION))
@@ -62,19 +63,63 @@ fn create_deployment() -> anyhow::Result<Deployment> {
         })
         .build()?;
 
-    DeploymentBuilder::new()
-        .name(NAME)
-        .selector_match_labels(labels())
-        .pod_labels(labels())
-        .volume_from_pvc("grafana", NAME)
-        .container(container)
-        .security_context(PodSecurityContext {
-            fs_group: Some(472),
-            supplemental_groups: Some(vec![0]),
+    let sts = StatefulSet {
+        metadata: ObjectMeta {
+            name: Some(NAME.to_string()),
             ..Default::default()
-        })
-        .volume_from_configmap("datasources", "datasources", "victoriametrics.yaml", "victoriametrics.yaml")
-        .build()
+        },
+        spec: Some(StatefulSetSpec {
+            selector: LabelSelector {
+                match_labels: Some(labels()),
+                ..Default::default()
+            },
+            replicas: Some(1),
+            template: PodTemplateSpec {
+                metadata: Some(ObjectMeta {
+                    labels: Some(labels()),
+                    ..Default::default()
+                }),
+                spec: Some(PodSpec {
+                    volumes: Some(vec![
+                        Volume {
+                            name: String::from("datasources"),
+                            config_map: Some(ConfigMapVolumeSource {
+                                name: String::from("datasources"),
+                                items: Some(vec![KeyToPath {
+                                    key: String::from("victoriametrics.yaml"),
+                                    path: String::from("victoriametrics.yaml"),
+                                    ..Default::default()
+                                }]),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        },
+                        Volume {
+                            name: String::from("grafana"),
+                            persistent_volume_claim: Some(PersistentVolumeClaimVolumeSource {
+
+                                claim_name: NAME.to_string(),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        },
+                    ]),
+                    containers: vec![container],
+                    security_context: Some(PodSecurityContext {
+                        fs_group: Some(472),
+                        supplemental_groups: Some(vec![0]),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    Ok(sts)
 }
 
 fn create_service() -> anyhow::Result<Service> {
@@ -138,19 +183,19 @@ fn main() -> anyhow::Result<()> {
     let pvc = create_pvc()?;
     let svc = create_service()?;
     let route = create_route()?;
-    let deployment = create_deployment()?;
+    let sts = create_statefulset()?;
     let cm = create_configmap()?;
 
     let pvc_value = serde_json::to_value(&pvc)?;
     let svc_value = serde_json::to_value(&svc)?;
     let route_value = serde_json::to_value(&route)?;
-    let deployment_value = serde_json::to_value(&deployment)?;
+    let sts_value = serde_json::to_value(&sts)?;
     let cm_value = serde_json::to_value(&cm)?;
 
     resources.push(pvc_value);
     resources.push(svc_value);
     resources.push(route_value);
-    resources.push(deployment_value);
+    resources.push(sts_value);
     resources.push(cm_value);
 
     println!("{}", serde_json::to_string(&resources)?);
