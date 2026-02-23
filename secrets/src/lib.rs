@@ -53,6 +53,13 @@ pub struct MinifluxSecrets {
 #[derive(Deserialize, PartialEq, Debug)]
 pub struct TailscaleSecrets {
     pub authkey: String,
+    pub oauth: OAuthClient,
+}
+
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct OAuthClient {
+    pub client_id: String,
+    pub client_secret: String,
 }
 
 #[derive(Deserialize, PartialEq, Debug)]

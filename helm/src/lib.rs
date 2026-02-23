@@ -1,6 +1,8 @@
+use std::fs;
 use std::{collections::HashMap, process::Command};
 use std::path::Path;
 use anyhow::{anyhow, format_err};
+use regex::Regex;
 use serde_json::Value;
 
 pub fn repo_exists(name: &str, url: &str) -> bool {
@@ -77,9 +79,28 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, release_
     if chart_name.starts_with("oci://") {
         cmd.arg(chart_name);
     } else {
-        let chart_path = format!("{}-{}.tgz", chart_name, chart_version);
+        // Find the pulled helm chart with the given version; some repos add
+        // the digest to the end of the filename
+        let mut files = fs::read_dir(source_dir)
+            .expect("should be able to read source directory {}");
+        let chart_prefix = format!("{}-{}", chart_name, chart_version);
+        let escaped = regex::escape(&chart_prefix);
+        let pattern = format!(r"/{}([-\w]+)?.tgz$", escaped);
+        let re = Regex::new(&pattern).expect("regex should be created from chart name and version");
+
+        let found = files
+            .find_map(|filename| {
+                let filename_str = filename.expect("filename should be able to be decoded").path().display().to_string();
+
+                if re.is_match(&filename_str) {
+                    Some(filename_str)
+                } else {
+                    None
+                }
+            });
+
         // TODO fix unwrap
-        let chart_path = source_dir.join(chart_path);
+        let chart_path = source_dir.join(found.expect("unable to find helm chart file"));
         cmd.arg(chart_path);
     }
 
