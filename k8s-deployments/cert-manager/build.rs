@@ -11,9 +11,7 @@ const CHART_NAME: &str = "cert-manager";
 const NAMESPACE: &str = "cert-manager";
 
 fn main() -> anyhow::Result<()> {
-    if !helm::repo_exists(REPO_NAME, REPO_URL) {
-        helm::add_repo(REPO_NAME, REPO_URL)
-    }
+    helm::ensure_repo(REPO_NAME, REPO_URL)?;
     let out_dir = env::var("OUT_DIR")?;
     let out_path = Path::new(&out_dir);
 
@@ -23,13 +21,16 @@ fn main() -> anyhow::Result<()> {
         File::create(out_path.join("helm-output.yaml"))?
     );
 
-    let values = HashMap::from([
-        ("crds.enabled", "true"),
-        ("config.apiVersion", "controller.config.cert-manager.io/v1alpha1"),
-        ("config.kind", "ControllerConfiguration"),
-        ("config.enableGatewayAPI", "true"),
-    ]);
-    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(CHART_NAME), Some(values), None, out_path)?;
+    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
+        release_name: CHART_NAME,
+        set_values: HashMap::from([
+            ("crds.enabled", "true"),
+            ("config.apiVersion", "controller.config.cert-manager.io/v1alpha1"),
+            ("config.kind", "ControllerConfiguration"),
+            ("config.enableGatewayAPI", "true"),
+        ]),
+        values: None,
+    }, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
 }

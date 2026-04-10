@@ -11,9 +11,7 @@ const CHART_NAME: &str = "victoria-metrics-operator";
 const NAMESPACE: &str = "victoria-metrics-operator";
 
 fn main() -> anyhow::Result<()> {
-    if !helm::repo_exists(REPO_NAME, REPO_URL) {
-        helm::add_repo(REPO_NAME, REPO_URL)
-    }
+    helm::ensure_repo(REPO_NAME, REPO_URL)?;
     let out_dir = env::var("OUT_DIR")?;
     let out_path = Path::new(&out_dir);
 
@@ -24,14 +22,17 @@ fn main() -> anyhow::Result<()> {
             File::create(out_path.join("helm-output.yaml"))?
         );
 
-        let values = HashMap::from([
-            ("nameOverride", "vmo"),
-            // https://github.com/VictoriaMetrics/helm-charts/issues/2420#issuecomment-3341540003
-            ("crds.plain", "true"),
-            ("crds.upgrade.enabled", "true"),
-            ("crds.upgrade.forceConflicts", "true"),
-        ]);
-        let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some("vmo"), Some(values), None, out_path)?;
+        let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
+            release_name: "vmo",
+            set_values: HashMap::from([
+                ("nameOverride", "vmo"),
+                // https://github.com/VictoriaMetrics/helm-charts/issues/2420#issuecomment-3341540003
+                ("crds.plain", "true"),
+                ("crds.upgrade.enabled", "true"),
+                ("crds.upgrade.forceConflicts", "true"),
+            ]),
+            values: None,
+        }, out_path)?;
         write!(&mut file, "{}", template)?;
     }
 

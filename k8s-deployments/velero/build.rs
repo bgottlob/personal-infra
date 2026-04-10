@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -87,9 +88,8 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
 }
 
 fn main() -> anyhow::Result<()> {
-    if !helm::repo_exists(REPO_NAME, REPO_URL) {
-        helm::add_repo(REPO_NAME, REPO_URL)
-    }
+    helm::ensure_repo(REPO_NAME, REPO_URL)?;
+
     let out_dir = env::var("OUT_DIR")?;
     let out_path = Path::new(&out_dir);
 
@@ -103,23 +103,11 @@ fn main() -> anyhow::Result<()> {
         File::create(out_path.join("helm-output.yaml"))?
     );
 
-    let values_path = out_path.join("values.yaml");
-    {
-        let mut values_file = BufWriter::new(
-            File::create(values_path.clone())?
-        );
-
-        let values = values(
-            secrets.velero.bucket.access_key_id,
-            secrets.velero.bucket.secret_key
-        );
-        let values_str = serde_norway::to_string(&values).expect("values should serialize to yaml");
-        write!(&mut values_file, "{}", values_str)?;
-    }
-    // using the scope above closes the values file so that it is fully written
-    // to before helm template needs to use it
-
-    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some("velero"), None, Some(Path::new("values.yaml")), out_path)?;
+    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
+        release_name: "velero",
+        set_values: HashMap::new(),
+        values: Some(values(secrets.velero.bucket.access_key_id, secrets.velero.bucket.secret_key)),
+    }, out_path)?;
     write!(&mut out_file, "{}", template)?;
 
     println!("cargo:rerun-if-changed=build.rs");

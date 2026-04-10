@@ -16,9 +16,7 @@ fn main() -> anyhow::Result<()> {
     let secrets = secrets::decrypt_parse_secrets(&secrets_path)
         .unwrap_or_else(|_| panic!("Should parse {} file into Secrets struct", secrets_path));
 
-    if !helm::repo_exists(REPO_NAME, REPO_URL) {
-        helm::add_repo(REPO_NAME, REPO_URL)
-    }
+    helm::ensure_repo(REPO_NAME, REPO_URL)?;
     let out_dir = env::var("OUT_DIR")?;
     let out_path = Path::new(&out_dir);
 
@@ -28,12 +26,14 @@ fn main() -> anyhow::Result<()> {
         File::create(out_path.join("helm-output.yaml"))?
     );
 
-    let values: HashMap<&str, &str> = HashMap::from([
-        ("region", "us-east"),
-        ("apiToken", secrets.linode.csi_driver_token.as_str()),
-    ]);
-
-    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, Some(RELEASE_NAME), Some(values), None, out_path)?;
+    let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
+        release_name: RELEASE_NAME,
+        set_values: HashMap::from([
+            ("region", "us-east"),
+            ("apiToken", secrets.linode.csi_driver_token.as_str()),
+        ]),
+        values: None,
+    }, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
 }
