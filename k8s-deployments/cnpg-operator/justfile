@@ -1,0 +1,4 @@
+name          := "cnpg-operator"
+default_flags := "-namespace cnpg-system"
+
+import '../shared_yoke.just'

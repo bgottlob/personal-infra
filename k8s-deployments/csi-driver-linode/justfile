@@ -1,0 +1,4 @@
+name          := "csi-driver-linode"
+default_flags := "-namespace kube-system -force-conflicts"
+
+import '../shared_yoke.just'

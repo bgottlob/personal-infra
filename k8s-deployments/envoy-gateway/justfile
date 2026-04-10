@@ -1,0 +1,4 @@
+name          := "envoy-gateway"
+default_flags := "-namespace envoy-gateway-system -create-namespace"
+
+import '../shared_yoke.just'

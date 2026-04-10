@@ -1,0 +1,4 @@
+name          := "external-dns"
+default_flags := "-namespace external-dns"
+
+import '../shared_yoke.just'

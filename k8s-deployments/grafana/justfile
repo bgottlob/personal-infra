@@ -1,0 +1,4 @@
+name          := "grafana"
+default_flags := "-namespace grafana -create-namespace"
+
+import '../shared_yoke.just'

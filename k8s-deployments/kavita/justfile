@@ -1,0 +1,4 @@
+name          := "kavita"
+default_flags := "-namespace kavita -create-namespace"
+
+import '../shared_yoke.just'

@@ -1,0 +1,28 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "blog",
+    "cert-manager",
+    "cnpg-database",
+    "cnpg-operator",
+    "csi-driver-linode",
+    "envoy-gateway",
+    "external-dns",
+    "grafana",
+    "helm",
+    "k8s-gateway-api",
+    "kavita",
+    "kube-state-metrics",
+    "kube_builder",
+    "metrics-server",
+    "miniflux",
+    "registry",
+    "rmfakecloud",
+    "secrets",
+    "tailscale",
+    "velero",
+    "victoria-metrics-operator",
+    "victoria-metrics",
+    "wallabag",
+]

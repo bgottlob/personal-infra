@@ -1,0 +1,4 @@
+name          := "registry"
+default_flags := "-namespace registry"
+
+import '../shared_yoke.just'

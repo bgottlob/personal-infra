@@ -1,0 +1,4 @@
+name          := "victoria-metrics"
+default_flags := "-namespace victoria-metrics -create-namespace"
+
+import '../shared_yoke.just'

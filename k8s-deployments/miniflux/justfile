@@ -1,0 +1,4 @@
+name          := "miniflux"
+default_flags := "-namespace miniflux"
+
+import '../shared_yoke.just'

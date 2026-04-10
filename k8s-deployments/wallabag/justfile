@@ -1,0 +1,4 @@
+name          := "wallabag"
+default_flags := "-namespace wallabag"
+
+import '../shared_yoke.just'

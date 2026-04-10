@@ -1,0 +1,4 @@
+name          := "velero"
+default_flags := "-namespace velero"
+
+import '../shared_yoke.just'

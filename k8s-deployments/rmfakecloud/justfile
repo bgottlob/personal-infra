@@ -1,0 +1,4 @@
+name          := "rmfakecloud"
+default_flags := "-namespace rmfakecloud"
+
+import '../shared_yoke.just'

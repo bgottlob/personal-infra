@@ -1,0 +1,4 @@
+name          := "vikunja"
+default_flags := "-namespace vikunja"
+
+import '../shared_yoke.just'

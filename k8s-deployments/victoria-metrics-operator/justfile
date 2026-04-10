@@ -1,0 +1,4 @@
+name          := "victoria-metrics-operator"
+default_flags := "-namespace victoria-metrics-operator -create-namespace"
+
+import '../shared_yoke.just'

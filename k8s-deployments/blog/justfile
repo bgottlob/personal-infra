@@ -1,0 +1,4 @@
+name          := "blog"
+default_flags := "-namespace blog"
+
+import '../shared_yoke.just'

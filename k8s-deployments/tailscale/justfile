@@ -1,0 +1,4 @@
+name          := "tailscale"
+default_flags := "-namespace tailscale -create-namespace"
+
+import '../shared_yoke.just'

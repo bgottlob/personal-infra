@@ -1,0 +1,4 @@
+name          := "metrics-server"
+default_flags := "-namespace kube-system"
+
+import '../shared_yoke.just'

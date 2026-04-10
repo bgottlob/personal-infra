@@ -1,0 +1,4 @@
+name          := "cert-manager"
+default_flags := "-namespace cert-manager -cross-namespace"
+
+import '../shared_yoke.just'
