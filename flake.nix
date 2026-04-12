@@ -74,6 +74,7 @@
             cargo-generate
             s3cmd
             egctl
+            cmctl
           ];
           nativeBuildInputs = [rust];
         };
