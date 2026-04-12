@@ -57,13 +57,14 @@ fn main() -> anyhow::Result<()> {
                 },
             },
         })),
+        ..Default::default()
     }, out_path)?;
     write!(&mut main_out_file, "{}", main_template)?;
 
     let crds_template = helm::template(CRDS_CHART_URL, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: "envoy-gateway-crds",
         set_values: HashMap::from([("crds.envoyGateway.enabled", "true")]),
-        values: None,
+        ..Default::default()
     }, out_path)?;
     write!(&mut crds_out_file, "{}", crds_template)?;
 

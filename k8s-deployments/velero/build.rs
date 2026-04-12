@@ -107,6 +107,7 @@ fn main() -> anyhow::Result<()> {
         release_name: "velero",
         set_values: HashMap::new(),
         values: Some(values(secrets.velero.bucket.access_key_id, secrets.velero.bucket.secret_key)),
+        ..Default::default()
     }, out_path)?;
     write!(&mut out_file, "{}", template)?;
 

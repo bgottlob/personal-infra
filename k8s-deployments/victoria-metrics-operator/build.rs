@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<()> {
                 ("crds.upgrade.enabled", "true"),
                 ("crds.upgrade.forceConflicts", "true"),
             ]),
-            values: None,
+            ..Default::default()
         }, out_path)?;
         write!(&mut file, "{}", template)?;
     }

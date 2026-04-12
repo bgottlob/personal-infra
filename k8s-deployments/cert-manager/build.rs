@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
             ("config.kind", "ControllerConfiguration"),
             ("config.enableGatewayAPI", "true"),
         ]),
-        values: None,
+        ..Default::default()
     }, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())

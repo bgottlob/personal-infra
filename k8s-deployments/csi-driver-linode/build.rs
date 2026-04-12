@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
             ("region", "us-east"),
             ("apiToken", secrets.linode.csi_driver_token.as_str()),
         ]),
-        values: None,
+        ..Default::default()
     }, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())

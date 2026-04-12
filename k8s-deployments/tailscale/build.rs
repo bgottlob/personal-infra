@@ -36,6 +36,7 @@ fn main() -> anyhow::Result<()> {
                 "clientSecret": secrets.tailscale.oauth.client_secret,
             },
         })),
+        ..Default::default()
     }, out_path)?;
     write!(&mut out_file, "{}", template)?;
 

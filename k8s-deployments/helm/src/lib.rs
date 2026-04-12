@@ -56,6 +56,20 @@ pub struct TemplateOptions<'a> {
     /// with `set_values` in practice — helm accepts both, but callers
     /// typically use one or the other.
     pub values: Option<Value>,
+    /// Include CRDs in the template output (`--include-crds`). Defaults to
+    /// `false`; set to `true` for charts that install CRDs.
+    pub include_crds: bool,
+}
+
+impl Default for TemplateOptions<'_> {
+    fn default() -> Self {
+        Self {
+            release_name: "",
+            set_values: HashMap::new(),
+            values: None,
+            include_crds: false,
+        }
+    }
 }
 
 /// Returns `true` if a repo with the given `name` and `url` is already
@@ -195,6 +209,10 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, options:
             })?;
 
         cmd.arg(found);
+    }
+
+    if options.include_crds {
+        cmd.arg("--include-crds");
     }
 
     for (key, val) in &options.set_values {

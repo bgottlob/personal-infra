@@ -24,7 +24,7 @@ fn main() -> anyhow::Result<()> {
     let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: CHART_NAME,
         set_values: HashMap::new(),
-        values: None,
+        ..Default::default()
     }, out_path)?;
     write!(&mut file, "{}", template)?;
     Ok(())
