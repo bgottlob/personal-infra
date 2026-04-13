@@ -1,6 +1,4 @@
 [workspace]
-resolver = "3"
-
 members = [
     "blog",
     "cert-manager",
@@ -19,10 +17,12 @@ members = [
     "miniflux",
     "registry",
     "rmfakecloud",
+    "sealed-secrets",
     "secrets",
     "tailscale",
     "velero",
-    "victoria-metrics-operator",
     "victoria-metrics",
+    "victoria-metrics-operator",
     "wallabag",
 ]
+resolver = "3"

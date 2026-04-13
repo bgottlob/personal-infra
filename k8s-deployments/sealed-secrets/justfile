@@ -1,0 +1,4 @@
+name          := "sealed-secrets"
+default_flags := "-namespace sealed-secrets -create-namespace"
+
+import '../shared_yoke.just'

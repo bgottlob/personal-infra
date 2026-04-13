@@ -671,6 +671,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sealed-secrets"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "helm",
+ "k8s-openapi",
+ "kube",
+ "kube-builder",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_norway",
+]
+
+[[package]]
 name = "secrets"
 version = "0.1.0"
 dependencies = [
