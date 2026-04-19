@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-user-creds
+  namespace: cnpg-database
+stringData:
+  username:
+    sops: postgres.app_user.username
+  password:
+    sops: postgres.app_user.password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: super-user-creds
+  namespace: cnpg-database
+stringData:
+  username:
+    sops: postgres.super_user.username
+  password:
+    sops: postgres.super_user.password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-s3-creds
+  namespace: cnpg-database
+stringData:
+  access_key_id:
+    sops: postgres.backup_bucket.access_key_id
+  secret_key:
+    sops: postgres.backup_bucket.secret_key

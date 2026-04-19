@@ -51,6 +51,19 @@
       rust = pkgs.rust-bin.stable.latest.default.override {
         targets = [ "wasm32-wasip1" ];
       };
+      sops-seal = pkgs.rustPlatform.buildRustPackage {
+        pname = "sops-seal";
+        version = "0.1.0";
+        src = builtins.path {
+          name = "k8s-deployments";
+          path = ./k8s-deployments;
+          filter = path: type:
+            builtins.baseNameOf path != "target";
+        };
+        cargoLock.lockFile = ./k8s-deployments/Cargo.lock;
+        cargoBuildFlags = [ "--bin" "sops-seal" ];
+        doCheck = false;
+      };
     in
       with pkgs;
       {
@@ -75,6 +88,8 @@
             s3cmd
             egctl
             cmctl
+            kubeseal
+            sops-seal
           ];
           nativeBuildInputs = [rust];
         };

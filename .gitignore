@@ -12,3 +12,6 @@ charts/
 
 # rust compiler output
 target/
+
+# locally cached sealed secrets (re-generated on demand)
+sealed-secrets.json
