@@ -2,28 +2,15 @@ use kube_builder::prelude::*;
 use std::collections::BTreeMap;
 
 use k8s_openapi::{
-    api::{apps::v1::Deployment, core::v1::{PersistentVolumeClaim, ResourceRequirements, Secret}},
+    api::{apps::v1::Deployment, core::v1::PersistentVolumeClaim, core::v1::ResourceRequirements},
     apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString},
 };
 
 const NAME: &str = "vikunja";
 const VERSION: &str = "0.24.6";
 
-const PG_HOST: &str = "main-db-rw.main-db";
-const DATABASE_NAME: &str = "vikunja";
 const DB_SECRET_NAME: &str = "vikunja-database";
-
 const DATA_PVC_NAME: &str = "vikunja-data";
-
-fn create_db_secret() -> anyhow::Result<Secret> {
-    SecretBuilder::new()
-        .name(DB_SECRET_NAME)
-        .value("HOST", PG_HOST)
-        .value("DATABASE", DATABASE_NAME)
-        .value("USERNAME", env!("POSTGRES_USERNAME"))
-        .value("PASSWORD", env!("POSTGRES_PASSWORD"))
-        .build()
-}
 
 fn create_deploy() -> anyhow::Result<Deployment> {
     let mut labels: BTreeMap<String, String> = BTreeMap::new();
@@ -78,22 +65,22 @@ fn create_pvc() -> anyhow::Result<PersistentVolumeClaim> {
 }
 
 fn main() -> anyhow::Result<()> {
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
     let deploy = create_deploy()?;
-    let secret = create_db_secret()?;
     let pvc = create_pvc()?;
-
-    let ts_secret = tailscale::secret(env!("TS_AUTHKEY"));
     let (ts_role, ts_role_binding, ts_service_account) = tailscale::rbac();
 
-    let resources = vec![
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
+    if !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+    resources.push(vec![
         serde_json::value::to_value(deploy)?,
-        serde_json::value::to_value(secret)?,
-        serde_json::value::to_value(ts_secret)?,
         serde_json::value::to_value(ts_role)?,
         serde_json::value::to_value(ts_role_binding)?,
         serde_json::value::to_value(ts_service_account)?,
         serde_json::value::to_value(pvc)?,
-    ];
-    println!("{}", serde_json::to_string(&resources).unwrap());
+    ]);
+    println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }

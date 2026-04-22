@@ -3,20 +3,10 @@
  * https://tailscale.com/kb/1185/kubernetes#prerequisites
  */
 
-use k8s_openapi::{api::{core::v1::{Secret, ServiceAccount}, rbac::v1::{PolicyRule, Role, RoleBinding, RoleRef, Subject}}, apimachinery::pkg::apis::meta::v1::ObjectMeta};
-
-use crate::secret::SecretBuilder;
+use k8s_openapi::{api::{core::v1::ServiceAccount, rbac::v1::{PolicyRule, Role, RoleBinding, RoleRef, Subject}}, apimachinery::pkg::apis::meta::v1::ObjectMeta};
 
 const SA_NAME: &str = "tailscale";
 const TS_KUBE_SECRET: &str = "tailscale-auth";
-
-pub fn secret<S: Into<String>>(authkey: S) -> Secret {
-    SecretBuilder::new()
-        .name(TS_KUBE_SECRET)
-        .value("TS_AUTHKEY", &authkey.into())
-        .build()
-        .expect("Tailscale secret should be built")
-}
 
 fn service_account() -> ServiceAccount {
     ServiceAccount {

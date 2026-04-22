@@ -14,7 +14,7 @@ fn labels() -> BTreeMap<String, String> {
 }
 
 fn create_deployment() -> anyhow::Result<Deployment> {
-    let image = format!("{}/{}:{}", env!("REGISTRY_SERVER"), NAME, IMAGE_TAG);
+    let image = format!("registry.bgottlob.com/{}:{}", NAME, IMAGE_TAG);
     let memory = Quantity(String::from("8Mi"));
     let container = ContainerBuilder::new()
         .name(NAME)
@@ -53,22 +53,20 @@ fn create_route() -> anyhow::Result<HTTPRoute> {
 }
 
 fn main() -> anyhow::Result<()> {
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
     let deploy = create_deployment()?;
     let service = create_service()?;
     let route = create_route()?;
-    let docker_secret = docker_registry_secret(
-        env!("REGISTRY_SERVER").into(),
-        env!("REGISTRY_USERNAME").into(),
-        env!("REGISTRY_PASSWORD").into(),
-        env!("REGISTRY_EMAIL").into(),
-    );
 
-    let resources = vec![
-        serde_json::value::to_value(docker_secret)?,
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
+    if !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+    resources.push(vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
         serde_json::value::to_value(route)?,
-    ];
+    ]);
     println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }

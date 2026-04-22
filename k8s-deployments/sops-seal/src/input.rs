@@ -6,6 +6,8 @@ use std::{fs::File, io::Read, path::PathBuf};
 #[derive(Deserialize, Debug)]
 pub struct SecretTemplate {
     pub metadata: ObjectMeta,
+    #[serde(rename = "type", default)]
+    pub type_: Option<String>,
     #[serde(rename = "stringData", default)]
     pub string_data: BTreeMap<String, StringDataValue>,
 }
@@ -15,6 +17,16 @@ pub struct SecretTemplate {
 pub enum StringDataValue {
     Literal(String),
     SopsRef { sops: String },
+    SopsDockerRegistry { sops_docker_registry: DockerRegistryRef },
+}
+
+/// Sops paths for the four fields that make up a docker registry credential.
+#[derive(Deserialize, Debug)]
+pub struct DockerRegistryRef {
+    pub server: String,
+    pub username: String,
+    pub password: String,
+    pub email: String,
 }
 
 pub fn read(template: PathBuf) -> anyhow::Result<Vec<SecretTemplate>> {

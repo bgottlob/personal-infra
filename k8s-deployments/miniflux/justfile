@@ -1,39 +1,4 @@
 name          := "miniflux"
 default_flags := "-namespace miniflux"
 
-sealed_secrets_file := source_directory() + "/sealed-secrets.json"
-secrets_file        := source_directory() + "/../../secrets.yaml"
-template_file       := source_directory() + "/secrets-template.yaml"
-
-# Re-seal if sealed-secrets.json is missing or older than secrets.yaml or the template
-_maybe_seal:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    SEALED="{{sealed_secrets_file}}"
-    SECRETS="{{secrets_file}}"
-    TEMPLATE="{{template_file}}"
-    if [ ! -f "$SEALED" ] || [ "$SECRETS" -nt "$SEALED" ] || [ "$TEMPLATE" -nt "$SEALED" ]; then
-        echo "Sealing secrets..."
-        sops-seal --format json --secrets "$SECRETS" "$TEMPLATE" | jq '{"sealed-secrets": .}' > "$SEALED"
-    fi
-
-# Deploy to the cluster
-takeoff extra_flags="": _maybe_seal
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cargo build --manifest-path {{source_directory()}}/Cargo.toml --target-dir {{source_directory()}}/target --target=wasm32-wasip1 --release
-    yoke takeoff {{default_flags}} {{extra_flags}} {{name}} {{source_directory()}}/target/wasm32-wasip1/release/{{name}}.wasm < {{sealed_secrets_file}}
-
-# Print rendered manifests to stdout without deploying
-debug extra_flags="": _maybe_seal
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cargo build --manifest-path {{source_directory()}}/Cargo.toml --target-dir {{source_directory()}}/target --target=wasm32-wasip1
-    yoke takeoff -stdout {{default_flags}} {{extra_flags}} {{name}} {{source_directory()}}/target/wasm32-wasip1/debug/{{name}}.wasm < {{sealed_secrets_file}}
-
-# Show a diff of changes without deploying
-diff extra_flags="": _maybe_seal
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cargo build --manifest-path {{source_directory()}}/Cargo.toml --target-dir {{source_directory()}}/target --target=wasm32-wasip1
-    yoke takeoff -diff-only {{default_flags}} {{extra_flags}} {{name}} {{source_directory()}}/target/wasm32-wasip1/debug/{{name}}.wasm < {{sealed_secrets_file}}
+import '../shared_yoke.just'

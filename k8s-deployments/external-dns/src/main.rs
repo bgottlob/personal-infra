@@ -2,7 +2,7 @@ use kube_builder::prelude::*;
 use std::collections::BTreeMap;
 
 use k8s_openapi::{
-    api::{apps::v1::Deployment, core::v1::{Secret, ServiceAccount}, rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject}},
+    api::{apps::v1::Deployment, core::v1::ServiceAccount, rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject}},
     apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::ObjectMeta},
 };
 
@@ -11,13 +11,6 @@ const IMAGE: &str = "registry.k8s.io/external-dns/external-dns";
 const VERSION: &str = "v0.20.0";
 const LINODE_SECRET_NAME: &str = "linode";
 const NAMESPACE: &str = "external-dns";
-
-fn create_secret() -> anyhow::Result<Secret> {
-    SecretBuilder::new()
-        .name(LINODE_SECRET_NAME)
-        .value("token", env!("LINODE_TOKEN"))
-        .build()
-}
 
 fn create_deploy() -> anyhow::Result<Deployment> {
     let mut labels: BTreeMap<String, String> = BTreeMap::new();
@@ -189,17 +182,20 @@ fn create_rbac() -> (ClusterRole, ClusterRoleBinding, ServiceAccount) {
 }
 
 fn main() -> anyhow::Result<()> {
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
     let deploy = create_deploy()?;
-    let secret = create_secret()?;
     let (cr, crb, sa) = create_rbac();
 
-    let resources = vec![
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
+    if !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+    resources.push(vec![
         serde_json::value::to_value(deploy)?,
-        serde_json::value::to_value(secret)?,
         serde_json::value::to_value(cr)?,
         serde_json::value::to_value(crb)?,
         serde_json::value::to_value(sa)?,
-    ];
-    println!("{}", serde_json::to_string(&resources).unwrap());
+    ]);
+    println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }

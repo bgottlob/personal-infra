@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{ConfigMap, Secret, Service, VolumeMount},
-}, apimachinery::pkg::{apis::meta::v1::ObjectMeta}};
+    core::v1::{ConfigMap, Service, VolumeMount},
+}, apimachinery::pkg::apis::meta::v1::ObjectMeta};
 
 const NAME: &str = "registry";
 const VERSION: &str = "2.8.3";
@@ -74,21 +74,6 @@ fn create_configmap() -> ConfigMap {
     }
 }
 
-fn create_s3_secret() -> anyhow::Result<Secret> {
-    SecretBuilder::new()
-        .name(S3_SECRET_NAME)
-        .value("accesskey", env!("S3_ACCESS_KEY"))
-        .value("secretkey", env!("S3_SECRET_KEY"))
-        .build()
-}
-
-fn create_auth_secret() -> anyhow::Result<Secret> {
-    SecretBuilder::new()
-        .name(S3_SECRET_NAME)
-        .value("htpasswd", env!("AUTH_HTPASSWD"))
-        .build()
-}
-
 fn create_service() -> anyhow::Result<Service> {
     ServiceBuilder::new()
         .selector(labels())
@@ -107,21 +92,22 @@ fn create_route() -> anyhow::Result<HTTPRoute> {
 }
 
 fn main() -> anyhow::Result<()> {
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
     let deploy = create_deploy()?;
     let service = create_service()?;
     let route = create_route()?;
-    let s3_secret = create_s3_secret()?;
-    let auth_secret = create_auth_secret()?;
     let configmap = create_configmap();
 
-    let resources = vec![
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
+    if !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+    resources.push(vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
         serde_json::value::to_value(route)?,
-        serde_json::value::to_value(s3_secret)?,
-        serde_json::value::to_value(auth_secret)?,
         serde_json::value::to_value(configmap)?,
-    ];
-    println!("{}", serde_json::to_string(&resources).unwrap());
+    ]);
+    println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }

@@ -3,6 +3,7 @@ pub mod deployment;
 pub mod http_route;
 pub mod ingress;
 pub mod persistent_volume_claim;
+pub mod sealed_secrets;
 pub mod secret;
 pub mod service;
 pub mod tailscale;
@@ -13,6 +14,7 @@ pub mod prelude {
     pub use crate::http_route::*;
     pub use crate::ingress::*;
     pub use crate::persistent_volume_claim::*;
+    pub use crate::sealed_secrets::*;
     pub use crate::secret::*;
     pub use crate::service::*;
     pub use crate::tailscale;

@@ -75,14 +75,10 @@ name = "blog"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64",
  "k8s-gateway-api",
  "k8s-openapi",
  "kube-builder",
- "secrets",
- "serde",
  "serde_json",
- "serde_norway",
 ]
 
 [[package]]
@@ -162,15 +158,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "helm",
  "k8s-openapi",
  "kube",
  "kube-builder",
  "schemars",
- "secrets",
  "serde",
  "serde_json",
- "serde_norway",
 ]
 
 [[package]]
@@ -300,13 +293,9 @@ name = "external-dns"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64",
  "k8s-openapi",
  "kube-builder",
- "secrets",
- "serde",
  "serde_json",
- "serde_norway",
 ]
 
 [[package]]
@@ -452,6 +441,9 @@ dependencies = [
  "base64",
  "k8s-gateway-api",
  "k8s-openapi",
+ "sealed-secrets-crd",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -610,10 +602,7 @@ dependencies = [
  "k8s-gateway-api",
  "k8s-openapi",
  "kube-builder",
- "secrets",
- "serde",
  "serde_json",
- "serde_norway",
 ]
 
 [[package]]
@@ -791,10 +780,10 @@ name = "sops-seal"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "clap",
  "k8s-openapi",
  "sealed-secrets-crd",
- "secrets",
  "serde",
  "serde_json",
  "serde_norway",
@@ -916,6 +905,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "vikunja"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "k8s-openapi",
+ "kube-builder",
+ "serde_json",
+]
+
+[[package]]
 name = "wallabag"
 version = "0.1.0"
 dependencies = [
@@ -923,10 +922,7 @@ dependencies = [
  "k8s-gateway-api",
  "k8s-openapi",
  "kube-builder",
- "secrets",
- "serde",
  "serde_json",
- "serde_norway",
 ]
 
 [[package]]

@@ -3,17 +3,18 @@ mod cnpg;
 use std::collections::BTreeMap;
 
 use crate::cnpg::*;
-use k8s_openapi::api::core::v1::Secret;
 use kube::core::ObjectMeta;
-use kube_builder::secret::SecretBuilder;
+use kube_builder::prelude::*;
 
 const CNPG_CLUSTER_NAME: &str = "main-db";
-const SUPER_USER_CREDS_SECRET_NAME: &str = "super-user-creds";
 const APP_USER_CREDS_SECRET_NAME: &str = "app-user-creds";
+const SUPER_USER_CREDS_SECRET_NAME: &str = "super-user-creds";
 const IMAGE_CATALOG_NAME: &str = "postgresql";
 const S3_CREDS_SECRET_NAME: &str = "backup-s3-creds";
 const OBJECT_STORE_NAME: &str = "linode-store";
 const BARMAN_PLUGIN_NAME: &str = "barman-cloud.cloudnative-pg.io";
+// Must match Cluster.spec.bootstrap.initdb.owner
+const APP_USER_USERNAME: &str = "app";
 
 use clap::Parser;
 
@@ -27,33 +28,37 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let is_restore = args.restore;
-    let mut resources = Vec::new();
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
 
-    resources.push(serde_json::to_value(create_database_cluster(is_restore))?);
-    resources.push(serde_json::to_value(create_scheduled_backup(is_restore))?);
+    if !is_restore && !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+
+    let mut other: Vec<serde_json::Value> = Vec::new();
+
+    other.push(serde_json::to_value(create_database_cluster(is_restore))?);
+    other.push(serde_json::to_value(create_scheduled_backup(is_restore))?);
 
     if !is_restore {
-        resources.push(serde_json::to_value(create_app_user_secret())?);
-        resources.push(serde_json::to_value(create_super_user_secret())?);
-        resources.push(serde_json::to_value(create_s3_secret())?);
-        resources.push(serde_json::to_value(create_image_catalog())?);
-        resources.push(serde_json::to_value(create_object_store())?);
+        other.push(serde_json::to_value(create_image_catalog())?);
+        other.push(serde_json::to_value(create_object_store())?);
 
-        resources.push(serde_json::to_value(create_database(
-                    String::from("wallabag"), String::from(env!("APP_USER_USERNAME")),
+        other.push(serde_json::to_value(create_database(
+            String::from("wallabag"), String::from(APP_USER_USERNAME),
         ))?);
 
-        resources.push(serde_json::to_value(create_database(
-                    String::from("vikunja"), String::from(env!("APP_USER_USERNAME")),
+        other.push(serde_json::to_value(create_database(
+            String::from("vikunja"), String::from(APP_USER_USERNAME),
         ))?);
 
-        resources.push(serde_json::to_value(create_database(
-                    String::from("miniflux"), String::from(env!("APP_USER_USERNAME")),
+        other.push(serde_json::to_value(create_database(
+            String::from("miniflux"), String::from(APP_USER_USERNAME),
         ))?);
     }
 
-
-    println!("{}", serde_json::to_string(&resources).unwrap());
+    resources.push(other);
+    println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }
 
@@ -85,33 +90,6 @@ fn create_database(name: String, owner: String) -> Database {
         },
         ..Default::default()
     }
-}
-
-fn create_app_user_secret() -> Secret {
-    SecretBuilder::new()
-        .name(APP_USER_CREDS_SECRET_NAME)
-        .value("username", env!("APP_USER_USERNAME"))
-        .value("password", env!("APP_USER_PASSWORD"))
-        .build()
-        .expect("app user secret should be built")
-}
-
-fn create_super_user_secret() -> Secret {
-    SecretBuilder::new()
-        .name(SUPER_USER_CREDS_SECRET_NAME)
-        .value("username", env!("SUPER_USER_USERNAME"))
-        .value("password", env!("SUPER_USER_PASSWORD"))
-        .build()
-        .expect("super user secret should be built")
-}
-
-fn create_s3_secret() -> Secret {
-    SecretBuilder::new()
-        .name(S3_CREDS_SECRET_NAME)
-        .value("access_key_id", env!("ACCESS_KEY_ID"))
-        .value("secret_key", env!("SECRET_KEY"))
-        .build()
-        .expect("s3 secret should be built")
 }
 
 fn create_object_store() -> ObjectStore {
@@ -198,7 +176,6 @@ fn create_database_cluster(is_restore: bool) -> Cluster {
         ClusterBootstrap {
             initdb: Some(ClusterBootstrapInitdb {
                 database: Some(String::from("app")),
-                // TODO make this a var
                 owner: Some(String::from("app")),
                 secret: Some(ClusterBootstrapInitdbSecret {
                     name: APP_USER_CREDS_SECRET_NAME.to_string(),

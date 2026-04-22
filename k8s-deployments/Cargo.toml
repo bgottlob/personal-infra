@@ -23,6 +23,7 @@ members = [
     "velero",
     "victoria-metrics",
     "victoria-metrics-operator",
+    "vikunja",
     "wallabag",
 ]
 resolver = "3"

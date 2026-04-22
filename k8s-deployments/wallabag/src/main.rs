@@ -5,18 +5,15 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::{api::{
     apps::v1::Deployment,
-    core::v1::{Secret, Service},
+    core::v1::Service,
 }, apimachinery::pkg::api::resource::Quantity};
-
-const PG_HOST: &str = "main-db-rw.main-db";
-const PG_PORT: i32 = 5432;
-const DATABASE_NAME: &str = "wallabag";
 
 const NAME: &str = "wallabag";
 const VERSION: &str = "2.6.14";
 const IMAGE: &str = "wallabag/wallabag";
 const PORT: i32 = 80;
 const HOSTNAME: &str = "wallabag.bgottlob.com";
+const DATABASE_NAME: &str = "wallabag";
 
 const DATABASE_SECRET: &str = "wallabag-postgres";
 
@@ -55,16 +52,6 @@ fn create_deploy() -> anyhow::Result<Deployment> {
         .build()
 }
 
-fn create_secret() -> anyhow::Result<Secret> {
-    SecretBuilder::new()
-        .name(DATABASE_SECRET)
-        .value("host", PG_HOST)
-        .value("password", env!("POSTGRES_PASSWORD"))
-        .value("port", format!("{}", PG_PORT).as_str())
-        .value("user", env!("POSTGRES_USERNAME"))
-        .build()
-}
-
 fn create_service() -> anyhow::Result<Service> {
     ServiceBuilder::new()
         .selector(labels())
@@ -83,18 +70,20 @@ fn create_http_route() -> anyhow::Result<HTTPRoute> {
 }
 
 fn main() -> anyhow::Result<()> {
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
     let deploy = create_deploy()?;
     let service = create_service()?;
-    let secret = create_secret()?;
-
     let route = create_http_route()?;
 
-    let resources = vec![
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
+    if !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+    resources.push(vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
-        serde_json::value::to_value(secret)?,
         serde_json::value::to_value(route)?,
-    ];
-    println!("{}", serde_json::to_string(&resources).unwrap());
+    ]);
+    println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }
