@@ -72,8 +72,7 @@ fn create_service() -> anyhow::Result<Service> {
         .name(NAME)
         .selector(labels())
         .port("http", PortProtocol::TCP, 80, PORT)
-        .load_balancer_class("tailscale")
-        .annotation("tailscale.com/hostname", NAME)
+        .expose_to_tailnet(Some(NAME))
         .build()
 }
 

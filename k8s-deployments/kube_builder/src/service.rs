@@ -109,6 +109,18 @@ impl ServiceBuilder {
         self
     }
 
+    pub fn expose_to_tailnet<S: Into<String>>(&mut self, hostname: Option<S>) -> &mut Self {
+        if let Some(hostname) = hostname {
+            self.annotations.insert(
+                String::from("tailscale.com/hostname"),
+                hostname.into(),
+            );
+        }
+
+        self.load_balancer_class = Some(String::from("tailscale"));
+        self
+    }
+
     pub fn build(&self) -> anyhow::Result<Service> {
         let name = self.name.clone().ok_or(anyhow!("Name must be set"))?;
         let annotations = self.annotations.clone();
