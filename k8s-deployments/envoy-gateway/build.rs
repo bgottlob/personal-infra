@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-const CHART_VERSION: &str = "v1.6.2";
+const CHART_VERSION: &str = "v1.7.3";
 const NAMESPACE: &str = "envoy-gateway-system";
 const MAIN_CHART_URL: &str = "oci://docker.io/envoyproxy/gateway-helm";
 const CRDS_CHART_URL: &str = "oci://docker.io/envoyproxy/gateway-crds-helm";
