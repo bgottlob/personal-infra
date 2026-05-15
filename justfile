@@ -1,9 +1,10 @@
 default:
     @just --list
 
-# Check that all yoke deployments build and render manifests successfully
-check:
-    @"{{ justfile_directory() }}/k8s-deployments/check.sh"
+# Check that all yoke deployments build and render manifests successfully.
+# Pass --diff to compare each deployment against the live cluster instead.
+check *args:
+    @"{{ justfile_directory() }}/k8s-deployments/check.sh" {{ args }}
 
 mod blog                        'k8s-deployments/blog'
 mod cert-manager                'k8s-deployments/cert-manager'
