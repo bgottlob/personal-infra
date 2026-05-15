@@ -14,6 +14,7 @@ pub struct ServiceBuilder {
     annotations: BTreeMap<String, String>,
     headless: bool,
     labels: BTreeMap<String, String>,
+    load_balancer_class: Option<String>,
 }
 
 impl Default for ServiceBuilder {
@@ -25,6 +26,7 @@ impl Default for ServiceBuilder {
             annotations: BTreeMap::default(),
             headless: false,
             labels: BTreeMap::default(),
+            load_balancer_class: None,
         }
     }
 }
@@ -97,6 +99,11 @@ impl ServiceBuilder {
         self
     }
 
+    pub fn load_balancer_class<S: Into<String>>(&mut self, class: S) -> &mut Self {
+        self.load_balancer_class = Some(class.into());
+        self
+    }
+
     pub fn label<K: Into<String>, V: Into<String>>(&mut self, key: K, value: V) -> &mut Self {
         self.labels.insert(key.into(), value.into());
         self
@@ -128,6 +135,8 @@ impl ServiceBuilder {
             true => None,
         };
 
+        let service_type = self.load_balancer_class.as_ref().map(|_| String::from("LoadBalancer"));
+
         let service = Service {
             metadata: ObjectMeta {
                 name: Some(name),
@@ -139,6 +148,8 @@ impl ServiceBuilder {
                 cluster_ip: cluster_ip,
                 selector: Some(selector),
                 ports: Some(ports),
+                type_: service_type,
+                load_balancer_class: self.load_balancer_class.clone(),
                 ..Default::default()
             }),
             ..Default::default()
