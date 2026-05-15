@@ -1,4 +1,6 @@
 name          := "tailscale"
+wasm_name     := name
+deployment_dir := source_directory()
 default_flags := "-namespace tailscale -create-namespace"
 
 import '../shared_yoke.just'

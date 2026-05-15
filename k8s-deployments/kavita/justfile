@@ -1,4 +1,6 @@
 name          := "kavita"
+wasm_name     := name
+deployment_dir := source_directory()
 default_flags := "-namespace kavita -create-namespace"
 
 import '../shared_yoke.just'

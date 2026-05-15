@@ -1,4 +1,6 @@
 name          := "velero"
+wasm_name     := name
+deployment_dir := source_directory()
 default_flags := "-namespace velero"
 
 import '../shared_yoke.just'

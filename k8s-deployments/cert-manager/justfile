@@ -1,4 +1,6 @@
 name          := "cert-manager"
+wasm_name     := name
+deployment_dir := source_directory()
 default_flags := "-namespace cert-manager -cross-namespace"
 
 import '../shared_yoke.just'
