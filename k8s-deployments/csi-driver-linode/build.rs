@@ -12,10 +12,6 @@ const NAMESPACE: &str = "kube-system";
 const RELEASE_NAME: &str = "csi-driver-linode";
 
 fn main() -> anyhow::Result<()> {
-    let secrets_path = std::env::var("SECRETS_FILE").unwrap_or("../../secrets.yaml".into());
-    let secrets = secrets::decrypt_parse_secrets(&secrets_path)
-        .unwrap_or_else(|_| panic!("Should parse {} file into Secrets struct", secrets_path));
-
     helm::ensure_repo(REPO_NAME, REPO_URL)?;
     let out_dir = env::var("OUT_DIR")?;
     let out_path = Path::new(&out_dir);
@@ -30,7 +26,7 @@ fn main() -> anyhow::Result<()> {
         release_name: RELEASE_NAME,
         set_values: HashMap::from([
             ("region", "us-east"),
-            ("apiToken", secrets.linode.csi_driver_token.as_str()),
+            ("apiToken", "placeholder"),
         ]),
         ..Default::default()
     }, out_path)?;

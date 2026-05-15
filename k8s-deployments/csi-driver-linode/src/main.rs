@@ -1,37 +1,48 @@
 use std::{collections::BTreeMap, env};
 use k8s_openapi::api::storage::v1::StorageClass;
 use kube::core::ObjectMeta;
+use kube_builder::prelude::*;
 use serde::Deserialize;
 use serde_norway::Value;
 
 fn main() -> anyhow::Result<()> {
+    let sealed_secrets = read_sealed_secrets_from_stdin()?;
+    let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
+
+    if !sealed_secrets.is_empty() {
+        resources.push(sealed_secrets);
+    }
+
     let helm_out_str = include_str!(concat!(env!("OUT_DIR"), "/helm-output.yaml"));
-    let mut resources: Vec<serde_json::Value> = Vec::new();
+    let mut helm_resources: Vec<serde_json::Value> = Vec::new();
     for document in serde_norway::Deserializer::from_str(helm_out_str) {
         let value = Value::deserialize(document)?;
         if value != Value::Null {
+            // Skip the Helm-generated Secret — replaced by SealedSecret via sops-seal
+            if *value.get("kind").unwrap() == Value::String(String::from("Secret")) {
+                continue;
+            }
             // Remove the default storage class annotation from any storage
             // classes that are set as default by the Helm chart; the encrypted
             // storage class will be the only default
-            // TODO this is janky but it works
             if *value.get("kind").unwrap() == Value::String(String::from("StorageClass")) {
                 let mut sc: StorageClass = serde_norway::from_value(value).unwrap();
                 if sc.metadata.annotations.is_some() {
                     sc.metadata.annotations.as_mut().unwrap().remove("storageclass.kubernetes.io/is-default-class");
                 }
-                resources.push(serde_json::to_value(sc)?);
+                helm_resources.push(serde_json::to_value(sc)?);
             } else {
-                resources.push(serde_json::to_value(value)?);
+                helm_resources.push(serde_json::to_value(value)?);
             }
         }
     }
 
     for sc in create_encrypted_storage_classes() {
-        let sc_value = serde_json::to_value(sc)?;
-        resources.push(sc_value);
+        helm_resources.push(serde_json::to_value(sc)?);
     }
 
-    println!("{}", serde_json::to_string(&resources).unwrap());
+    resources.push(helm_resources);
+    println!("{}", serde_json::to_string(&resources)?);
     Ok(())
 }
 

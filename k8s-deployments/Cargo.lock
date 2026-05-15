@@ -197,7 +197,6 @@ dependencies = [
  "kube",
  "kube-builder",
  "schemars",
- "secrets",
  "serde",
  "serde_json",
  "serde_norway",
