@@ -52,6 +52,10 @@ fn create_deploy() -> anyhow::Result<Deployment> {
         .env("DATABASE_URL", &database_url)
         .env_from_secret("ADMIN_USERNAME", ADMIN_SECRET, "username")
         .env_from_secret("ADMIN_PASSWORD", ADMIN_SECRET, "password")
+        // unread entries older than this are removed
+        .env("CLEANUP_ARCHIVE_UNREAD_DAYS", "60")
+        // read entries older than this are removed
+        .env("CLEANUP_ARCHIVE_READ_DAYS", "30")
         .container_port(PORT, "app", PortProtocol::TCP)
         .cpu_request(Quantity(String::from("50m")))
         .cpu_limit(Quantity(String::from("500m")))
