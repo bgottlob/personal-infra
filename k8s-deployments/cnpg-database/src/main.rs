@@ -221,7 +221,7 @@ fn create_database_cluster(is_restore: bool) -> Cluster {
             external_clusters,
 
             storage: Some(ClusterStorage {
-                size: Some(String::from("25Gi")),
+                size: Some(String::from("30Gi")),
                 storage_class: Some(String::from("linode-block-storage-retain-encrypted")),
                 resize_in_use_volumes: Some(true),
                 ..Default::default()
