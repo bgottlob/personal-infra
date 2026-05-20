@@ -25,8 +25,11 @@ fn main() -> anyhow::Result<()> {
     let template = helm::template(CHART_NAME, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: RELEASE_NAME,
         set_values: HashMap::from([
-            ("region", "us-east"),
-            ("apiToken", "placeholder"),
+            // Use a dedicated secret name to avoid conflict with the `linode`
+            // secret that LKE injects in kube-system with its own credentials.
+            ("secretRef.name", "linode-csi"),
+            ("secretRef.apiTokenRef", "token"),
+            ("secretRef.regionRef", "region"),
         ]),
         ..Default::default()
     }, out_path)?;

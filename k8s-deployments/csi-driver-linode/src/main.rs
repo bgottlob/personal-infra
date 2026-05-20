@@ -32,7 +32,9 @@ fn main() -> anyhow::Result<()> {
                 }
                 helm_resources.push(serde_json::to_value(sc)?);
             } else {
-                helm_resources.push(serde_json::to_value(value)?);
+                let mut json = serde_json::to_value(value)?;
+                fix_env_value_conflicts(&mut json);
+                helm_resources.push(json);
             }
         }
     }
@@ -44,6 +46,30 @@ fn main() -> anyhow::Result<()> {
     resources.push(helm_resources);
     println!("{}", serde_json::to_string(&resources)?);
     Ok(())
+}
+
+// The Helm chart generates env vars with both `value` and `valueFrom` set, which Kubernetes
+// rejects as invalid. Strip `value` from any env entry that also has `valueFrom`.
+fn fix_env_value_conflicts(value: &mut serde_json::Value) {
+    if let Some(containers) = value
+        .pointer_mut("/spec/template/spec/containers")
+        .and_then(|v| v.as_array_mut())
+    {
+        for container in containers {
+            if let Some(envs) = container
+                .get_mut("env")
+                .and_then(|e| e.as_array_mut())
+            {
+                for env in envs {
+                    if let Some(obj) = env.as_object_mut() {
+                        if obj.contains_key("valueFrom") {
+                            obj.remove("value");
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn create_encrypted_storage_classes() -> Vec<StorageClass> {
