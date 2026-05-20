@@ -45,6 +45,10 @@ resource "linode_lke_cluster" "personal" {
 
   pool {
     type = "g6-standard-1"
-    count = 2
+
+    autoscaler {
+      min = 1
+      max = 4
+    }
   }
 }
