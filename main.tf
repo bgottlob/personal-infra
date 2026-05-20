@@ -1,7 +1,11 @@
+variable "secrets_file" {
+  type = string
+}
+
 provider "sops" {}
 
 data "sops_file" "secrets" {
-  source_file = "secrets.yaml"
+  source_file = var.secrets_file
 }
 
 terraform {
@@ -27,7 +31,7 @@ terraform {
 }
 
 provider "linode" {
-  token = data.sops_file.secrets.data["linode.terraformToken"]
+  token = data.sops_file.secrets.data["linode.terraform_token"]
 }
 
 resource "linode_lke_cluster" "personal" {
