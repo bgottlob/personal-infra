@@ -47,6 +47,8 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn create_encrypted_storage_classes() -> Vec<StorageClass> {
+    // WaitForFirstConsumer delays volume provisioning until a pod is scheduled, ensuring
+    // the volume is created in the same zone as the pod and avoiding topology mismatches.
     vec![
         StorageClass {
             metadata: ObjectMeta {
@@ -59,6 +61,7 @@ fn create_encrypted_storage_classes() -> Vec<StorageClass> {
             ])),
             allow_volume_expansion: Some(true),
             provisioner: String::from("linodebs.csi.linode.com"),
+            volume_binding_mode: Some(String::from("WaitForFirstConsumer")),
             ..Default::default()
         },
         StorageClass {
@@ -76,6 +79,7 @@ fn create_encrypted_storage_classes() -> Vec<StorageClass> {
             allow_volume_expansion: Some(true),
             provisioner: String::from("linodebs.csi.linode.com"),
             reclaim_policy: Some(String::from("Retain")),
+            volume_binding_mode: Some(String::from("WaitForFirstConsumer")),
             ..Default::default()
         }
     ]
