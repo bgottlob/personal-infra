@@ -1,4 +1,4 @@
-secrets_file        := deployment_dir + "/../../secrets.yaml"
+secrets_file        := env_var("SECRETS_FILE")
 template_file       := deployment_dir + "/secrets-template.yaml"
 sealed_secrets_file := deployment_dir + "/sealed-secrets.json"
 
