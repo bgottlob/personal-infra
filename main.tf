@@ -47,8 +47,8 @@ resource "linode_lke_cluster" "personal" {
     type = "g6-standard-1"
 
     autoscaler {
-      min = 1
-      max = 4
+      min = 3
+      max = 5
     }
   }
 }
