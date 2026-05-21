@@ -241,6 +241,9 @@ fn create_database_cluster(is_restore: bool) -> Cluster {
                 name: String::from(SUPER_USER_CREDS_SECRET_NAME),
             }),
 
+            // Single-instance cluster — PDB would block node eviction during k8s upgrades
+            enable_pdb: Some(false),
+
             ..Default::default()
         },
         ..Default::default()
