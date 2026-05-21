@@ -30,6 +30,8 @@ fn main() -> anyhow::Result<()> {
                 ("crds.plain", "true"),
                 ("crds.upgrade.enabled", "true"),
                 ("crds.upgrade.forceConflicts", "true"),
+                // Use cert-manager to create and rotate the vmo-validation webhook TLS secret
+                ("admissionWebhooks.certManager.enabled", "true"),
             ]),
             ..Default::default()
         }, out_path)?;
