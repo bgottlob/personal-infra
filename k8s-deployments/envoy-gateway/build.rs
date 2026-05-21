@@ -36,6 +36,7 @@ fn main() -> anyhow::Result<()> {
         set_values: HashMap::new(),
         values: Some(json!({
             "deployment": {
+                "replicas": 2,
                 "envoyGateway": {
                     "resources": {
                         "requests": {
@@ -48,6 +49,10 @@ fn main() -> anyhow::Result<()> {
                         },
                     },
                 }
+            },
+            "podDisruptionBudget": {
+                "enabled": true,
+                "minAvailable": 1,
             },
             "config": {
                 "envoyGateway": {
