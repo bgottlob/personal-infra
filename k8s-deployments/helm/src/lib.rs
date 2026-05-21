@@ -187,6 +187,7 @@ pub fn template(chart_name: &str, chart_version: &str, namespace: &str, options:
 
     if chart_name.starts_with("oci://") {
         cmd.arg(chart_name);
+        cmd.args(["--version", chart_version]);
     } else {
         // Locate the pulled chart archive. Some repos append a digest suffix
         // after the version, so we match on prefix + ".tgz" rather than an
