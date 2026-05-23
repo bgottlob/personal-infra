@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use k8s_gateway_api::prelude::HTTPRoute;
 use k8s_openapi::api::core::v1::{ConfigMapVolumeSource, KeyToPath, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Volume};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::LabelSelector;
 use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}}; use kube::core::ObjectMeta;
@@ -127,15 +126,7 @@ fn create_service() -> anyhow::Result<Service> {
         .name(NAME)
         .port(CONTAINER_PORT_NAME, PortProtocol::TCP, 80, PORT)
         .selector(labels())
-        .build()
-}
-
-fn create_route() -> anyhow::Result<HTTPRoute> {
-    HTTPRouteBuilder::new()
-        .name(NAME)
-        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
-        .service_port_backend_rule(NAME, 80)
-        .hostname("grafana.bgottlob.com")
+        .expose_to_tailnet(Some(NAME))
         .build()
 }
 
@@ -182,21 +173,13 @@ fn main() -> anyhow::Result<()> {
 
     let pvc = create_pvc()?;
     let svc = create_service()?;
-    let route = create_route()?;
     let sts = create_statefulset()?;
     let cm = create_configmap()?;
 
-    let pvc_value = serde_json::to_value(&pvc)?;
-    let svc_value = serde_json::to_value(&svc)?;
-    let route_value = serde_json::to_value(&route)?;
-    let sts_value = serde_json::to_value(&sts)?;
-    let cm_value = serde_json::to_value(&cm)?;
-
-    resources.push(pvc_value);
-    resources.push(svc_value);
-    resources.push(route_value);
-    resources.push(sts_value);
-    resources.push(cm_value);
+    resources.push(serde_json::to_value(&pvc)?);
+    resources.push(serde_json::to_value(&svc)?);
+    resources.push(serde_json::to_value(&sts)?);
+    resources.push(serde_json::to_value(&cm)?);
 
     println!("{}", serde_json::to_string(&resources)?);
 
