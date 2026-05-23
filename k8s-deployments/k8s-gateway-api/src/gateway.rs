@@ -288,6 +288,8 @@ pub enum GatewayTlsFrontendPerPortTlsValidationMode {
 pub struct GatewayStatus {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub addresses: Option<Vec<GatewayStatusAddresses>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "attachedListenerSets")]
+    pub attached_listener_sets: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conditions: Option<Vec<Condition>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -307,8 +309,8 @@ pub struct GatewayStatusListeners {
     pub attached_routes: i32,
     pub conditions: Vec<Condition>,
     pub name: String,
-    #[serde(rename = "supportedKinds")]
-    pub supported_kinds: Vec<GatewayStatusListenersSupportedKinds>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "supportedKinds")]
+    pub supported_kinds: Option<Vec<GatewayStatusListenersSupportedKinds>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]

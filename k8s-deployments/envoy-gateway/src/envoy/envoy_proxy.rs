@@ -8,12 +8,14 @@ mod prelude {
     pub use serde::{Serialize, Deserialize};
     pub use std::collections::BTreeMap;
     pub use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
+    pub use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
 }
 use self::prelude::*;
 
 #[derive(CustomResource, Serialize, Deserialize, Clone, Debug, Default)]
 #[kube(group = "gateway.envoyproxy.io", version = "v1alpha1", kind = "EnvoyProxy", plural = "envoyproxies")]
 #[kube(namespaced)]
+#[kube(status = "EnvoyProxyStatus")]
 #[kube(schema = "disabled")]
 #[kube(derive="Default")]
 pub struct EnvoyProxySpec {
@@ -23,10 +25,14 @@ pub struct EnvoyProxySpec {
     pub bootstrap: Option<EnvoyProxyBootstrap>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub concurrency: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "dynamicModules")]
+    pub dynamic_modules: Option<Vec<EnvoyProxyDynamicModules>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "extraArgs")]
     pub extra_args: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "filterOrder")]
     pub filter_order: Option<Vec<EnvoyProxyFilterOrder>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "geoIP")]
+    pub geo_ip: Option<EnvoyProxyGeoIp>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "ipFamily")]
     pub ip_family: Option<EnvoyProxyIpFamily>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -35,6 +41,8 @@ pub struct EnvoyProxySpec {
     pub lua_validation: Option<EnvoyProxyLuaValidation>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "mergeGateways")]
     pub merge_gateways: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mergeType")]
+    pub merge_type: Option<EnvoyProxyMergeType>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "preserveRouteOrder")]
     pub preserve_route_order: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -57,6 +65,8 @@ pub struct EnvoyProxyBackendTls {
     pub client_certificate_ref: Option<EnvoyProxyBackendTlsClientCertificateRef>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "ecdhCurves")]
     pub ecdh_curves: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fingerprints: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxVersion")]
     pub max_version: Option<EnvoyProxyBackendTlsMaxVersion>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "minVersion")]
@@ -149,6 +159,43 @@ pub enum EnvoyProxyBootstrapType {
     JsonPatch,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyDynamicModules {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "doNotClose")]
+    pub do_not_close: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "loadGlobally")]
+    pub load_globally: Option<bool>,
+    pub name: String,
+    pub source: EnvoyProxyDynamicModulesSource,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyDynamicModulesSource {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local: Option<EnvoyProxyDynamicModulesSourceLocal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote: Option<EnvoyProxyDynamicModulesSourceRemote>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "type")]
+    pub r#type: Option<EnvoyProxyDynamicModulesSourceType>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyDynamicModulesSourceLocal {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyDynamicModulesSourceRemote {
+    pub sha256: String,
+    pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum EnvoyProxyDynamicModulesSourceType {
+    Local,
+    Remote,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyFilterOrder {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -160,12 +207,16 @@ pub struct EnvoyProxyFilterOrder {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyFilterOrderAfter {
+    #[serde(rename = "envoy.filters.http.custom_response")]
+    EnvoyFiltersHttpCustomResponse,
     #[serde(rename = "envoy.filters.http.health_check")]
     EnvoyFiltersHttpHealthCheck,
     #[serde(rename = "envoy.filters.http.fault")]
     EnvoyFiltersHttpFault,
     #[serde(rename = "envoy.filters.http.cors")]
     EnvoyFiltersHttpCors,
+    #[serde(rename = "envoy.filters.http.header_mutation")]
+    EnvoyFiltersHttpHeaderMutation,
     #[serde(rename = "envoy.filters.http.ext_authz")]
     EnvoyFiltersHttpExtAuthz,
     #[serde(rename = "envoy.filters.http.api_key_auth")]
@@ -186,32 +237,42 @@ pub enum EnvoyProxyFilterOrderAfter {
     EnvoyFiltersHttpExtProc,
     #[serde(rename = "envoy.filters.http.wasm")]
     EnvoyFiltersHttpWasm,
+    #[serde(rename = "envoy.filters.http.dynamic_modules")]
+    EnvoyFiltersHttpDynamicModules,
+    #[serde(rename = "envoy.filters.http.geoip")]
+    EnvoyFiltersHttpGeoip,
     #[serde(rename = "envoy.filters.http.rbac")]
     EnvoyFiltersHttpRbac,
     #[serde(rename = "envoy.filters.http.local_ratelimit")]
     EnvoyFiltersHttpLocalRatelimit,
     #[serde(rename = "envoy.filters.http.ratelimit")]
     EnvoyFiltersHttpRatelimit,
+    #[serde(rename = "envoy.filters.http.bandwidth_limit")]
+    EnvoyFiltersHttpBandwidthLimit,
     #[serde(rename = "envoy.filters.http.grpc_web")]
     EnvoyFiltersHttpGrpcWeb,
     #[serde(rename = "envoy.filters.http.grpc_stats")]
     EnvoyFiltersHttpGrpcStats,
-    #[serde(rename = "envoy.filters.http.custom_response")]
-    EnvoyFiltersHttpCustomResponse,
     #[serde(rename = "envoy.filters.http.credential_injector")]
     EnvoyFiltersHttpCredentialInjector,
     #[serde(rename = "envoy.filters.http.compressor")]
     EnvoyFiltersHttpCompressor,
+    #[serde(rename = "envoy.filters.http.dynamic_forward_proxy")]
+    EnvoyFiltersHttpDynamicForwardProxy,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyFilterOrderBefore {
+    #[serde(rename = "envoy.filters.http.custom_response")]
+    EnvoyFiltersHttpCustomResponse,
     #[serde(rename = "envoy.filters.http.health_check")]
     EnvoyFiltersHttpHealthCheck,
     #[serde(rename = "envoy.filters.http.fault")]
     EnvoyFiltersHttpFault,
     #[serde(rename = "envoy.filters.http.cors")]
     EnvoyFiltersHttpCors,
+    #[serde(rename = "envoy.filters.http.header_mutation")]
+    EnvoyFiltersHttpHeaderMutation,
     #[serde(rename = "envoy.filters.http.ext_authz")]
     EnvoyFiltersHttpExtAuthz,
     #[serde(rename = "envoy.filters.http.api_key_auth")]
@@ -232,32 +293,42 @@ pub enum EnvoyProxyFilterOrderBefore {
     EnvoyFiltersHttpExtProc,
     #[serde(rename = "envoy.filters.http.wasm")]
     EnvoyFiltersHttpWasm,
+    #[serde(rename = "envoy.filters.http.dynamic_modules")]
+    EnvoyFiltersHttpDynamicModules,
+    #[serde(rename = "envoy.filters.http.geoip")]
+    EnvoyFiltersHttpGeoip,
     #[serde(rename = "envoy.filters.http.rbac")]
     EnvoyFiltersHttpRbac,
     #[serde(rename = "envoy.filters.http.local_ratelimit")]
     EnvoyFiltersHttpLocalRatelimit,
     #[serde(rename = "envoy.filters.http.ratelimit")]
     EnvoyFiltersHttpRatelimit,
+    #[serde(rename = "envoy.filters.http.bandwidth_limit")]
+    EnvoyFiltersHttpBandwidthLimit,
     #[serde(rename = "envoy.filters.http.grpc_web")]
     EnvoyFiltersHttpGrpcWeb,
     #[serde(rename = "envoy.filters.http.grpc_stats")]
     EnvoyFiltersHttpGrpcStats,
-    #[serde(rename = "envoy.filters.http.custom_response")]
-    EnvoyFiltersHttpCustomResponse,
     #[serde(rename = "envoy.filters.http.credential_injector")]
     EnvoyFiltersHttpCredentialInjector,
     #[serde(rename = "envoy.filters.http.compressor")]
     EnvoyFiltersHttpCompressor,
+    #[serde(rename = "envoy.filters.http.dynamic_forward_proxy")]
+    EnvoyFiltersHttpDynamicForwardProxy,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyFilterOrderName {
+    #[serde(rename = "envoy.filters.http.custom_response")]
+    EnvoyFiltersHttpCustomResponse,
     #[serde(rename = "envoy.filters.http.health_check")]
     EnvoyFiltersHttpHealthCheck,
     #[serde(rename = "envoy.filters.http.fault")]
     EnvoyFiltersHttpFault,
     #[serde(rename = "envoy.filters.http.cors")]
     EnvoyFiltersHttpCors,
+    #[serde(rename = "envoy.filters.http.header_mutation")]
+    EnvoyFiltersHttpHeaderMutation,
     #[serde(rename = "envoy.filters.http.ext_authz")]
     EnvoyFiltersHttpExtAuthz,
     #[serde(rename = "envoy.filters.http.api_key_auth")]
@@ -278,22 +349,110 @@ pub enum EnvoyProxyFilterOrderName {
     EnvoyFiltersHttpExtProc,
     #[serde(rename = "envoy.filters.http.wasm")]
     EnvoyFiltersHttpWasm,
+    #[serde(rename = "envoy.filters.http.dynamic_modules")]
+    EnvoyFiltersHttpDynamicModules,
+    #[serde(rename = "envoy.filters.http.geoip")]
+    EnvoyFiltersHttpGeoip,
     #[serde(rename = "envoy.filters.http.rbac")]
     EnvoyFiltersHttpRbac,
     #[serde(rename = "envoy.filters.http.local_ratelimit")]
     EnvoyFiltersHttpLocalRatelimit,
     #[serde(rename = "envoy.filters.http.ratelimit")]
     EnvoyFiltersHttpRatelimit,
+    #[serde(rename = "envoy.filters.http.bandwidth_limit")]
+    EnvoyFiltersHttpBandwidthLimit,
     #[serde(rename = "envoy.filters.http.grpc_web")]
     EnvoyFiltersHttpGrpcWeb,
     #[serde(rename = "envoy.filters.http.grpc_stats")]
     EnvoyFiltersHttpGrpcStats,
-    #[serde(rename = "envoy.filters.http.custom_response")]
-    EnvoyFiltersHttpCustomResponse,
     #[serde(rename = "envoy.filters.http.credential_injector")]
     EnvoyFiltersHttpCredentialInjector,
     #[serde(rename = "envoy.filters.http.compressor")]
     EnvoyFiltersHttpCompressor,
+    #[serde(rename = "envoy.filters.http.dynamic_forward_proxy")]
+    EnvoyFiltersHttpDynamicForwardProxy,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EnvoyProxyGeoIp {
+    pub provider: EnvoyProxyGeoIpProvider,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EnvoyProxyGeoIpProvider {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxMind")]
+    pub max_mind: Option<EnvoyProxyGeoIpProviderMaxMind>,
+    #[serde(rename = "type")]
+    pub r#type: EnvoyProxyGeoIpProviderType,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMind {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "anonymousIpDbSource")]
+    pub anonymous_ip_db_source: Option<EnvoyProxyGeoIpProviderMaxMindAnonymousIpDbSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "asnDbSource")]
+    pub asn_db_source: Option<EnvoyProxyGeoIpProviderMaxMindAsnDbSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "cityDbSource")]
+    pub city_db_source: Option<EnvoyProxyGeoIpProviderMaxMindCityDbSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "countryDbSource")]
+    pub country_db_source: Option<EnvoyProxyGeoIpProviderMaxMindCountryDbSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "ispDbSource")]
+    pub isp_db_source: Option<EnvoyProxyGeoIpProviderMaxMindIspDbSource>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindAnonymousIpDbSource {
+    pub local: EnvoyProxyGeoIpProviderMaxMindAnonymousIpDbSourceLocal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindAnonymousIpDbSourceLocal {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindAsnDbSource {
+    pub local: EnvoyProxyGeoIpProviderMaxMindAsnDbSourceLocal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindAsnDbSourceLocal {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindCityDbSource {
+    pub local: EnvoyProxyGeoIpProviderMaxMindCityDbSourceLocal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindCityDbSourceLocal {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindCountryDbSource {
+    pub local: EnvoyProxyGeoIpProviderMaxMindCountryDbSourceLocal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindCountryDbSourceLocal {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindIspDbSource {
+    pub local: EnvoyProxyGeoIpProviderMaxMindIspDbSourceLocal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyGeoIpProviderMaxMindIspDbSourceLocal {
+    pub path: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum EnvoyProxyGeoIpProviderType {
+    MaxMind,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -312,7 +471,16 @@ pub struct EnvoyProxyLogging {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyLuaValidation {
     Strict,
+    InsecureSyntax,
     Disabled,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum EnvoyProxyMergeType {
+    Replace,
+    StrategicMerge,
+    #[serde(rename = "JSONMerge")]
+    JsonMerge,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -576,6 +744,8 @@ pub struct EnvoyProxyProviderKubernetesEnvoyDaemonSetPod {
     pub labels: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeSelector")]
     pub node_selector: Option<BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "priorityClassName")]
+    pub priority_class_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "securityContext")]
     pub security_context: Option<EnvoyProxyProviderKubernetesEnvoyDaemonSetPodSecurityContext>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1592,6 +1762,8 @@ pub struct EnvoyProxyProviderKubernetesEnvoyDaemonSetPodVolumesProjectedSourcesP
     pub max_expiration_seconds: Option<i32>,
     #[serde(rename = "signerName")]
     pub signer_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "userAnnotations")]
+    pub user_annotations: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -2583,6 +2755,8 @@ pub struct EnvoyProxyProviderKubernetesEnvoyDeploymentPod {
     pub labels: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "nodeSelector")]
     pub node_selector: Option<BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "priorityClassName")]
+    pub priority_class_name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "securityContext")]
     pub security_context: Option<EnvoyProxyProviderKubernetesEnvoyDeploymentPodSecurityContext>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3599,6 +3773,8 @@ pub struct EnvoyProxyProviderKubernetesEnvoyDeploymentPodVolumesProjectedSources
     pub max_expiration_seconds: Option<i32>,
     #[serde(rename = "signerName")]
     pub signer_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "userAnnotations")]
+    pub user_annotations: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4111,6 +4287,8 @@ pub struct EnvoyProxyTelemetry {
     pub access_log: Option<EnvoyProxyTelemetryAccessLog>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metrics: Option<EnvoyProxyTelemetryMetrics>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "requestID")]
+    pub request_id: Option<EnvoyProxyTelemetryRequestId>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tracing: Option<EnvoyProxyTelemetryTracing>,
 }
@@ -4205,6 +4383,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendRefs {
     pub namespace: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4245,12 +4425,28 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBre
     pub max_requests_per_connection: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "perEndpoint")]
     pub per_endpoint: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBreakerPerEndpoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retryBudget")]
+    pub retry_budget: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBreakerRetryBudget>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBreakerPerEndpoint {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxConnections")]
     pub max_connections: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBreakerRetryBudget {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "minRetryConcurrency")]
+    pub min_retry_concurrency: Option<i32>,
+    pub percent: EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBreakerRetryBudgetPercent,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsCircuitBreakerRetryBudgetPercent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denominator: Option<i32>,
+    pub numerator: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4313,6 +4509,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthChec
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthCheckActiveOverrides>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tcp: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthCheckActiveTcp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout: Option<String>,
@@ -4339,6 +4537,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthChec
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retriableStatuses")]
+    pub retriable_statuses: Option<Vec<i64>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4349,6 +4549,12 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthChec
     pub text: Option<String>,
     #[serde(rename = "type")]
     pub r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthCheckActiveOverrides {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4381,6 +4587,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthChec
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthCheckPassive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "alwaysEjectOneEndpoint")]
+    pub always_eject_one_endpoint: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "baseEjectionTime")]
     pub base_ejection_time: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consecutive5XxErrors")]
@@ -4401,6 +4609,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHealthChec
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHttp2 {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "connectionKeepalive")]
+    pub connection_keepalive: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHttp2ConnectionKeepalive>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialConnectionWindowSize")]
     pub initial_connection_window_size: Option<IntOrString>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialStreamWindowSize")]
@@ -4411,10 +4621,26 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHttp2 {
     pub on_invalid_message: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsHttp2ConnectionKeepalive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "idleInterval")]
+    pub idle_interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "intervalJitter")]
+    pub interval_jitter: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancer {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "backendUtilization")]
+    pub backend_utilization: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerBackendUtilization>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consistentHash")]
     pub consistent_hash: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHash>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "dynamicModule")]
+    pub dynamic_module: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerDynamicModule>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "endpointOverride")]
     pub endpoint_override: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerEndpointOverride>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "slowStart")]
@@ -4425,6 +4651,22 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalanc
     pub zone_aware: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerZoneAware>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerBackendUtilization {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "blackoutPeriod")]
+    pub blackout_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "errorUtilizationPenaltyPercent")]
+    pub error_utilization_penalty_percent: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "keepResponseHeaders")]
+    pub keep_response_headers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "metricNamesForComputingUtilization")]
+    pub metric_names_for_computing_utilization: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightExpirationPeriod")]
+    pub weight_expiration_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightUpdatePeriod")]
+    pub weight_update_period: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHash {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4433,6 +4675,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalanc
     pub header: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHashHeader>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHashHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "queryParams")]
+    pub query_params: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHashQueryParams>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "tableSize")]
     pub table_size: Option<i64>,
     #[serde(rename = "type")]
@@ -4458,6 +4702,11 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalanc
     pub name: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHashQueryParams {
+    pub name: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerConsistentHashType {
     #[serde(rename = "SourceIP")]
@@ -4465,6 +4714,16 @@ pub enum EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancer
     Header,
     Headers,
     Cookie,
+    QueryParams,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerDynamicModule {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    #[serde(rename = "lbPolicyName")]
+    pub lb_policy_name: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4490,12 +4749,16 @@ pub enum EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancer
     LeastRequest,
     Random,
     RoundRobin,
+    BackendUtilization,
+    DynamicModule,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerZoneAware {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferLocal")]
     pub prefer_local: Option<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerZoneAwarePreferLocal>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightedZones")]
+    pub weighted_zones: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerZoneAwareWeightedZones>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4512,6 +4775,12 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalanc
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerZoneAwarePreferLocalForce {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "minEndpointsInZoneThreshold")]
     pub min_endpoints_in_zone_threshold: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsLoadBalancerZoneAwareWeightedZones {
+    pub weight: i32,
+    pub zone: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -4589,6 +4858,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksAlsBackendSettingsTimeoutHtt
     pub max_stream_duration: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "requestTimeout")]
     pub request_timeout: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "streamIdleTimeout")]
+    pub stream_idle_timeout: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4630,9 +4901,13 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetry {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "backendSettings")]
     pub backend_settings: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub headers: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "resourceAttributes")]
+    pub resource_attributes: Option<BTreeMap<String, String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resources: Option<BTreeMap<String, String>>,
 }
@@ -4663,6 +4938,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendRefs {
     pub namespace: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4703,12 +4980,28 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub max_requests_per_connection: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "perEndpoint")]
     pub per_endpoint: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsCircuitBreakerPerEndpoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retryBudget")]
+    pub retry_budget: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudget>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsCircuitBreakerPerEndpoint {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxConnections")]
     pub max_connections: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudget {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "minRetryConcurrency")]
+    pub min_retry_concurrency: Option<i32>,
+    pub percent: EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudgetPercent,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudgetPercent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denominator: Option<i32>,
+    pub numerator: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4771,6 +5064,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHealthCheckActiveOverrides>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tcp: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHealthCheckActiveTcp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout: Option<String>,
@@ -4797,6 +5092,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retriableStatuses")]
+    pub retriable_statuses: Option<Vec<i64>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4807,6 +5104,12 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub text: Option<String>,
     #[serde(rename = "type")]
     pub r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHealthCheckActiveOverrides {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4839,6 +5142,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHealthCheckPassive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "alwaysEjectOneEndpoint")]
+    pub always_eject_one_endpoint: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "baseEjectionTime")]
     pub base_ejection_time: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consecutive5XxErrors")]
@@ -4859,6 +5164,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHttp2 {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "connectionKeepalive")]
+    pub connection_keepalive: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHttp2ConnectionKeepalive>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialConnectionWindowSize")]
     pub initial_connection_window_size: Option<IntOrString>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialStreamWindowSize")]
@@ -4869,10 +5176,26 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub on_invalid_message: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsHttp2ConnectionKeepalive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "idleInterval")]
+    pub idle_interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "intervalJitter")]
+    pub interval_jitter: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancer {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "backendUtilization")]
+    pub backend_utilization: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerBackendUtilization>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consistentHash")]
     pub consistent_hash: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHash>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "dynamicModule")]
+    pub dynamic_module: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerDynamicModule>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "endpointOverride")]
     pub endpoint_override: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerEndpointOverride>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "slowStart")]
@@ -4883,6 +5206,22 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub zone_aware: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAware>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerBackendUtilization {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "blackoutPeriod")]
+    pub blackout_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "errorUtilizationPenaltyPercent")]
+    pub error_utilization_penalty_percent: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "keepResponseHeaders")]
+    pub keep_response_headers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "metricNamesForComputingUtilization")]
+    pub metric_names_for_computing_utilization: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightExpirationPeriod")]
+    pub weight_expiration_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightUpdatePeriod")]
+    pub weight_update_period: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHash {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -4891,6 +5230,8 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub header: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashHeader>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "queryParams")]
+    pub query_params: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashQueryParams>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "tableSize")]
     pub table_size: Option<i64>,
     #[serde(rename = "type")]
@@ -4916,6 +5257,11 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub name: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashQueryParams {
+    pub name: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashType {
     #[serde(rename = "SourceIP")]
@@ -4923,6 +5269,16 @@ pub enum EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLo
     Header,
     Headers,
     Cookie,
+    QueryParams,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerDynamicModule {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    #[serde(rename = "lbPolicyName")]
+    pub lb_policy_name: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4948,12 +5304,16 @@ pub enum EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLo
     LeastRequest,
     Random,
     RoundRobin,
+    BackendUtilization,
+    DynamicModule,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAware {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferLocal")]
     pub prefer_local: Option<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwarePreferLocal>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightedZones")]
+    pub weighted_zones: Option<Vec<EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwareWeightedZones>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -4970,6 +5330,12 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwarePreferLocalForce {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "minEndpointsInZoneThreshold")]
     pub min_endpoints_in_zone_threshold: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwareWeightedZones {
+    pub weight: i32,
+    pub zone: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -5047,12 +5413,20 @@ pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettings
     pub max_stream_duration: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "requestTimeout")]
     pub request_timeout: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "streamIdleTimeout")]
+    pub stream_idle_timeout: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryBackendSettingsTimeoutTcp {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "connectTimeout")]
     pub connect_timeout: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryAccessLogSettingsSinksOpenTelemetryHeaders {
+    pub name: String,
+    pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -5067,12 +5441,15 @@ pub enum EnvoyProxyTelemetryAccessLogSettingsSinksType {
 pub enum EnvoyProxyTelemetryAccessLogSettingsType {
     Listener,
     Route,
+    Upstream,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryMetrics {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "clusterStatName")]
     pub cluster_stat_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "enableGRPCStats")]
+    pub enable_grpc_stats: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "enablePerEndpointStats")]
     pub enable_per_endpoint_stats: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "enableRequestResponseSizesStats")]
@@ -5116,6 +5493,8 @@ pub struct EnvoyProxyTelemetryMetricsPrometheusCompression {
     pub brotli: Option<EnvoyProxyTelemetryMetricsPrometheusCompressionBrotli>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gzip: Option<EnvoyProxyTelemetryMetricsPrometheusCompressionGzip>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "minContentLength")]
+    pub min_content_length: Option<IntOrString>,
     #[serde(rename = "type")]
     pub r#type: EnvoyProxyTelemetryMetricsPrometheusCompressionType,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -5158,9 +5537,17 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetry {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "backendSettings")]
     pub backend_settings: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub headers: Option<Vec<EnvoyProxyTelemetryMetricsSinksOpenTelemetryHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "reportCountersAsDeltas")]
+    pub report_counters_as_deltas: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "reportHistogramsAsDeltas")]
+    pub report_histograms_as_deltas: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "resourceAttributes")]
+    pub resource_attributes: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5189,6 +5576,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendRefs {
     pub namespace: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5229,12 +5618,28 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBre
     pub max_requests_per_connection: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "perEndpoint")]
     pub per_endpoint: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBreakerPerEndpoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retryBudget")]
+    pub retry_budget: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudget>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBreakerPerEndpoint {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxConnections")]
     pub max_connections: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudget {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "minRetryConcurrency")]
+    pub min_retry_concurrency: Option<i32>,
+    pub percent: EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudgetPercent,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsCircuitBreakerRetryBudgetPercent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denominator: Option<i32>,
+    pub numerator: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5297,6 +5702,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthChec
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthCheckActiveOverrides>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tcp: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthCheckActiveTcp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout: Option<String>,
@@ -5323,6 +5730,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthChec
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retriableStatuses")]
+    pub retriable_statuses: Option<Vec<i64>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5333,6 +5742,12 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthChec
     pub text: Option<String>,
     #[serde(rename = "type")]
     pub r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthCheckActiveOverrides {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5365,6 +5780,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthChec
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthCheckPassive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "alwaysEjectOneEndpoint")]
+    pub always_eject_one_endpoint: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "baseEjectionTime")]
     pub base_ejection_time: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consecutive5XxErrors")]
@@ -5385,6 +5802,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHealthChec
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHttp2 {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "connectionKeepalive")]
+    pub connection_keepalive: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHttp2ConnectionKeepalive>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialConnectionWindowSize")]
     pub initial_connection_window_size: Option<IntOrString>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialStreamWindowSize")]
@@ -5395,10 +5814,26 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHttp2 {
     pub on_invalid_message: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsHttp2ConnectionKeepalive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "idleInterval")]
+    pub idle_interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "intervalJitter")]
+    pub interval_jitter: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancer {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "backendUtilization")]
+    pub backend_utilization: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerBackendUtilization>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consistentHash")]
     pub consistent_hash: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHash>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "dynamicModule")]
+    pub dynamic_module: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerDynamicModule>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "endpointOverride")]
     pub endpoint_override: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerEndpointOverride>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "slowStart")]
@@ -5409,6 +5844,22 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalanc
     pub zone_aware: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAware>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerBackendUtilization {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "blackoutPeriod")]
+    pub blackout_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "errorUtilizationPenaltyPercent")]
+    pub error_utilization_penalty_percent: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "keepResponseHeaders")]
+    pub keep_response_headers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "metricNamesForComputingUtilization")]
+    pub metric_names_for_computing_utilization: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightExpirationPeriod")]
+    pub weight_expiration_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightUpdatePeriod")]
+    pub weight_update_period: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHash {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -5417,6 +5868,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalanc
     pub header: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashHeader>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers: Option<Vec<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "queryParams")]
+    pub query_params: Option<Vec<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashQueryParams>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "tableSize")]
     pub table_size: Option<i64>,
     #[serde(rename = "type")]
@@ -5442,6 +5895,11 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalanc
     pub name: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashQueryParams {
+    pub name: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerConsistentHashType {
     #[serde(rename = "SourceIP")]
@@ -5449,6 +5907,16 @@ pub enum EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancer
     Header,
     Headers,
     Cookie,
+    QueryParams,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerDynamicModule {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    #[serde(rename = "lbPolicyName")]
+    pub lb_policy_name: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5474,12 +5942,16 @@ pub enum EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancer
     LeastRequest,
     Random,
     RoundRobin,
+    BackendUtilization,
+    DynamicModule,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAware {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferLocal")]
     pub prefer_local: Option<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwarePreferLocal>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightedZones")]
+    pub weighted_zones: Option<Vec<EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwareWeightedZones>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5496,6 +5968,12 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalanc
 pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwarePreferLocalForce {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "minEndpointsInZoneThreshold")]
     pub min_endpoints_in_zone_threshold: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsLoadBalancerZoneAwareWeightedZones {
+    pub weight: i32,
+    pub zone: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -5573,6 +6051,8 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsTimeoutHtt
     pub max_stream_duration: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "requestTimeout")]
     pub request_timeout: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "streamIdleTimeout")]
+    pub stream_idle_timeout: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5581,9 +6061,29 @@ pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryBackendSettingsTimeoutTcp
     pub connect_timeout: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryMetricsSinksOpenTelemetryHeaders {
+    pub name: String,
+    pub value: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyTelemetryMetricsSinksType {
     OpenTelemetry,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryRequestId {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tracing: Option<EnvoyProxyTelemetryRequestIdTracing>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum EnvoyProxyTelemetryRequestIdTracing {
+    PackAndSample,
+    Sample,
+    Pack,
+    Disable,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -5595,6 +6095,10 @@ pub struct EnvoyProxyTelemetryTracing {
     pub sampling_fraction: Option<EnvoyProxyTelemetryTracingSamplingFraction>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "samplingRate")]
     pub sampling_rate: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "spanName")]
+    pub span_name: Option<EnvoyProxyTelemetryTracingSpanName>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5645,6 +6149,8 @@ pub struct EnvoyProxyTelemetryTracingProvider {
     pub backend_settings: Option<EnvoyProxyTelemetryTracingProviderBackendSettings>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "openTelemetry")]
+    pub open_telemetry: Option<EnvoyProxyTelemetryTracingProviderOpenTelemetry>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "serviceName")]
@@ -5681,6 +6187,8 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendRefs {
     pub namespace: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5721,12 +6229,28 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreaker {
     pub max_requests_per_connection: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "perEndpoint")]
     pub per_endpoint: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreakerPerEndpoint>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retryBudget")]
+    pub retry_budget: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreakerRetryBudget>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreakerPerEndpoint {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxConnections")]
     pub max_connections: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreakerRetryBudget {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "minRetryConcurrency")]
+    pub min_retry_concurrency: Option<i32>,
+    pub percent: EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreakerRetryBudgetPercent,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsCircuitBreakerRetryBudgetPercent {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denominator: Option<i32>,
+    pub numerator: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5789,6 +6313,8 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActive {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActiveOverrides>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tcp: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActiveTcp>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout: Option<String>,
@@ -5815,6 +6341,8 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActiveHtt
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "retriableStatuses")]
+    pub retriable_statuses: Option<Vec<i64>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5825,6 +6353,12 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActiveHtt
     pub text: Option<String>,
     #[serde(rename = "type")]
     pub r#type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActiveOverrides {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5857,6 +6391,8 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckActiveTcp
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckPassive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "alwaysEjectOneEndpoint")]
+    pub always_eject_one_endpoint: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "baseEjectionTime")]
     pub base_ejection_time: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consecutive5XxErrors")]
@@ -5877,6 +6413,8 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHealthCheckPassive {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHttp2 {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "connectionKeepalive")]
+    pub connection_keepalive: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsHttp2ConnectionKeepalive>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialConnectionWindowSize")]
     pub initial_connection_window_size: Option<IntOrString>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialStreamWindowSize")]
@@ -5887,10 +6425,26 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHttp2 {
     pub on_invalid_message: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsHttp2ConnectionKeepalive {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "idleInterval")]
+    pub idle_interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "intervalJitter")]
+    pub interval_jitter: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancer {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "backendUtilization")]
+    pub backend_utilization: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerBackendUtilization>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "consistentHash")]
     pub consistent_hash: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHash>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "dynamicModule")]
+    pub dynamic_module: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerDynamicModule>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "endpointOverride")]
     pub endpoint_override: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerEndpointOverride>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "slowStart")]
@@ -5901,6 +6455,22 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancer {
     pub zone_aware: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAware>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerBackendUtilization {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "blackoutPeriod")]
+    pub blackout_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "errorUtilizationPenaltyPercent")]
+    pub error_utilization_penalty_percent: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "keepResponseHeaders")]
+    pub keep_response_headers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "metricNamesForComputingUtilization")]
+    pub metric_names_for_computing_utilization: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightExpirationPeriod")]
+    pub weight_expiration_period: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightUpdatePeriod")]
+    pub weight_update_period: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHash {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -5909,6 +6479,8 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsiste
     pub header: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHashHeader>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub headers: Option<Vec<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHashHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "queryParams")]
+    pub query_params: Option<Vec<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHashQueryParams>>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "tableSize")]
     pub table_size: Option<i64>,
     #[serde(rename = "type")]
@@ -5934,6 +6506,11 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsiste
     pub name: String,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHashQueryParams {
+    pub name: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistentHashType {
     #[serde(rename = "SourceIP")]
@@ -5941,6 +6518,16 @@ pub enum EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerConsistent
     Header,
     Headers,
     Cookie,
+    QueryParams,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerDynamicModule {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    #[serde(rename = "lbPolicyName")]
+    pub lb_policy_name: String,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5966,12 +6553,16 @@ pub enum EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerType {
     LeastRequest,
     Random,
     RoundRobin,
+    BackendUtilization,
+    DynamicModule,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAware {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "preferLocal")]
     pub prefer_local: Option<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAwarePreferLocal>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "weightedZones")]
+    pub weighted_zones: Option<Vec<EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAwareWeightedZones>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -5988,6 +6579,12 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAwar
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAwarePreferLocalForce {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "minEndpointsInZoneThreshold")]
     pub min_endpoints_in_zone_threshold: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsLoadBalancerZoneAwareWeightedZones {
+    pub weight: i32,
+    pub zone: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -6065,12 +6662,55 @@ pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsTimeoutHttp {
     pub max_stream_duration: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "requestTimeout")]
     pub request_timeout: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "streamIdleTimeout")]
+    pub stream_idle_timeout: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyTelemetryTracingProviderBackendSettingsTimeoutTcp {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "connectTimeout")]
     pub connect_timeout: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderOpenTelemetry {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub headers: Option<Vec<EnvoyProxyTelemetryTracingProviderOpenTelemetryHeaders>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "resourceAttributes")]
+    pub resource_attributes: Option<BTreeMap<String, String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sampler: Option<EnvoyProxyTelemetryTracingProviderOpenTelemetrySampler>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderOpenTelemetryHeaders {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EnvoyProxyTelemetryTracingProviderOpenTelemetrySampler {
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "samplingPercentage")]
+    pub sampling_percentage: Option<EnvoyProxyTelemetryTracingProviderOpenTelemetrySamplerSamplingPercentage>,
+    #[serde(rename = "type")]
+    pub r#type: EnvoyProxyTelemetryTracingProviderOpenTelemetrySamplerType,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingProviderOpenTelemetrySamplerSamplingPercentage {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denominator: Option<i32>,
+    pub numerator: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum EnvoyProxyTelemetryTracingProviderOpenTelemetrySamplerType {
+    AlwaysOn,
+    AlwaysOff,
+    TraceIdRatio,
+    ParentBasedAlwaysOn,
+    ParentBasedAlwaysOff,
+    ParentBasedTraceIdRatio,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -6095,8 +6735,38 @@ pub struct EnvoyProxyTelemetryTracingSamplingFraction {
     pub numerator: i32,
 }
 
-#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyTelemetryTracingSpanName {
+    pub client: String,
+    pub server: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct EnvoyProxyStatus {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ancestors: Option<Vec<EnvoyProxyStatusAncestors>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyStatusAncestors {
+    #[serde(rename = "ancestorRef")]
+    pub ancestor_ref: EnvoyProxyStatusAncestorsAncestorRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conditions: Option<Vec<Condition>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct EnvoyProxyStatusAncestorsAncestorRef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub namespace: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "sectionName")]
+    pub section_name: Option<String>,
 }
 

@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-const CHART_VERSION: &str = "v1.7.3";
+const CHART_VERSION: &str = "v1.8.0";
 const NAMESPACE: &str = "envoy-gateway-system";
 const MAIN_CHART_URL: &str = "oci://docker.io/envoyproxy/gateway-helm";
 const CRDS_CHART_URL: &str = "oci://docker.io/envoyproxy/gateway-crds-helm";
@@ -28,8 +28,8 @@ fn main() -> anyhow::Result<()> {
         File::create(out_path.join("crds-helm-output.yaml"))?
     );
 
-    helm::pull(None, "oci://docker.io/envoyproxy/gateway-helm", CHART_VERSION, out_path)?;
-    helm::pull(None, "oci://docker.io/envoyproxy/gateway-crds-helm", CHART_VERSION, out_path)?;
+    helm::pull(None, MAIN_CHART_URL, CHART_VERSION, out_path)?;
+    helm::pull(None, CRDS_CHART_URL, CHART_VERSION, out_path)?;
 
     let main_template = helm::template(MAIN_CHART_URL, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: "envoy-gateway",
@@ -68,7 +68,10 @@ fn main() -> anyhow::Result<()> {
 
     let crds_template = helm::template(CRDS_CHART_URL, CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: "envoy-gateway-crds",
-        set_values: HashMap::from([("crds.envoyGateway.enabled", "true")]),
+        set_values: HashMap::from([
+            ("crds.envoyGateway.enabled", "true"),
+            ("crds.gatewayAPI.enabled", "true"),
+        ]),
         ..Default::default()
     }, out_path)?;
     write!(&mut crds_out_file, "{}", crds_template)?;
