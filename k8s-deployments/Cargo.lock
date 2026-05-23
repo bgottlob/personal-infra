@@ -161,6 +161,7 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "kube-builder",
+ "monitoring-crds",
  "schemars",
  "serde",
  "serde_json",
@@ -521,6 +522,16 @@ dependencies = [
  "k8s-openapi",
  "kube-builder",
  "sealed-secrets-crd",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "monitoring-crds"
+version = "0.1.0"
+dependencies = [
+ "k8s-openapi",
+ "kube",
  "serde",
  "serde_json",
 ]

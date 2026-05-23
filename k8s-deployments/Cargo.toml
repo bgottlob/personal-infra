@@ -15,6 +15,7 @@ members = [
     "kube_builder",
     "metrics-server",
     "miniflux",
+    "monitoring-crds",
     "registry",
     "rmfakecloud",
     "sealed-secrets", "sealed-secrets-crd",

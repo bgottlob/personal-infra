@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use crate::cnpg::*;
 use kube::core::ObjectMeta;
 use kube_builder::prelude::*;
+use monitoring_crds::{self, pod_monitor::{PodMonitor, PodMonitorPodMetricsEndpoints, PodMonitorSelector, PodMonitorSpec}};
 
 const CNPG_CLUSTER_NAME: &str = "main-db";
 const APP_USER_CREDS_SECRET_NAME: &str = "app-user-creds";
@@ -43,6 +44,7 @@ fn main() -> anyhow::Result<()> {
     if !is_restore {
         other.push(serde_json::to_value(create_image_catalog())?);
         other.push(serde_json::to_value(create_object_store())?);
+        other.push(serde_json::to_value(create_pod_monitor())?);
 
         other.push(serde_json::to_value(create_database(
             String::from("wallabag"), String::from(APP_USER_USERNAME),
@@ -60,6 +62,33 @@ fn main() -> anyhow::Result<()> {
     resources.push(other);
     println!("{}", serde_json::to_string(&resources)?);
     Ok(())
+}
+
+fn create_pod_monitor() -> PodMonitor {
+    PodMonitor {
+        metadata: ObjectMeta {
+            name: Some(CNPG_CLUSTER_NAME.into()),
+            namespace: Some(CNPG_CLUSTER_NAME.into()),
+            ..Default::default()
+        },
+        spec: PodMonitorSpec {
+            selector: PodMonitorSelector {
+                match_labels: Some(BTreeMap::from([
+                  (String::from("cnpg.io/cluster"), CNPG_CLUSTER_NAME.to_string()),
+                  (String::from("cnpg.io/podRole"), String::from("instance")),
+                ])),
+                ..Default::default()
+            },
+            pod_metrics_endpoints: Some(vec![
+               PodMonitorPodMetricsEndpoints {
+                   port: Some("metrics".into()),
+                   ..Default::default()
+               }
+            ]),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
 }
 
 fn barman_plugin_params(is_restore: bool) -> BTreeMap<String, String> {
