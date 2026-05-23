@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use serde_json::json;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -29,6 +30,24 @@ fn main() -> anyhow::Result<()> {
             ("config.kind", "ControllerConfiguration"),
             ("config.enableGatewayAPI", "true"),
         ]),
+        values: Some(json!({
+            "resources": { // cert-manager-controller
+                "requests": { "cpu": "25m", "memory": "64Mi" },
+                "limits":   { "cpu": "100m", "memory": "64Mi" },
+            },
+            "cainjector": {
+                "resources": {
+                    "requests": { "cpu": "25m", "memory": "128Mi" },
+                    "limits":   { "cpu": "100m", "memory": "128Mi" },
+                },
+            },
+            "webhook": {
+                "resources": {
+                    "requests": { "cpu": "25m", "memory": "32Mi" },
+                    "limits":   { "cpu": "100m", "memory": "32Mi" },
+                },
+            },
+        })),
         ..Default::default()
     }, out_path)?;
     write!(&mut file, "{}", template)?;
