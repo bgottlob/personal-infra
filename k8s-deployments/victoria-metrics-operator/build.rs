@@ -33,6 +33,12 @@ fn main() -> anyhow::Result<()> {
                 // Use cert-manager to create and rotate the vmo-validation webhook TLS secret
                 ("admissionWebhooks.certManager.enabled", "true"),
             ]),
+            values: Some(serde_json::json!({
+                "resources": {
+                    "requests": { "cpu": "20m", "memory": "128Mi" },
+                    "limits":   { "cpu": "100m", "memory": "128Mi" },
+                },
+            })),
             ..Default::default()
         }, out_path)?;
         write!(&mut file, "{}", template)?;

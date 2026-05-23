@@ -35,6 +35,12 @@ fn main() -> anyhow::Result<()> {
                 "clientId": secrets.tailscale.oauth.client_id,
                 "clientSecret": secrets.tailscale.oauth.client_secret,
             },
+            "operator": {
+                "resources": {
+                    "requests": { "cpu": "20m", "memory": "128Mi" },
+                    "limits":   { "cpu": "100m", "memory": "128Mi" },
+                },
+            },
         })),
         ..Default::default()
     }, out_path)?;

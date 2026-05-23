@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use k8s_openapi::{api::{
     apps::v1::Deployment,
     core::v1::{ConfigMap, Service, VolumeMount},
-}, apimachinery::pkg::apis::meta::v1::ObjectMeta};
+}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::ObjectMeta}};
 
 const NAME: &str = "registry";
 const VERSION: &str = "2.8.3";
@@ -31,6 +31,10 @@ fn create_deploy() -> anyhow::Result<Deployment> {
         .container_port(PORT, "app", PortProtocol::TCP)
         .env_from_secret("REGISTRY_STORAGE_S3_ACCESSKEY", S3_SECRET_NAME, "accesskey")
         .env_from_secret("REGISTRY_STORAGE_S3_SECRETKEY", S3_SECRET_NAME, "secretkey")
+        .cpu_request(Quantity(String::from("25m")))
+        .cpu_limit(Quantity(String::from("200m")))
+        .memory_request(Quantity(String::from("64Mi")))
+        .memory_limit(Quantity(String::from("64Mi")))
         .volume_mount(
             VolumeMount {
                 name: String::from("registry-config"),

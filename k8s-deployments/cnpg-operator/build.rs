@@ -32,11 +32,23 @@ fn main() -> anyhow::Result<()> {
     let cnpg_template = helm::template(CNPG_CHART_NAME, CNPG_CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: CNPG_CHART_NAME,
         set_values: HashMap::new(),
+        values: Some(serde_json::json!({
+            "resources": {
+                "requests": { "cpu": "50m", "memory": "128Mi" },
+                "limits":   { "cpu": "200m", "memory": "128Mi" },
+            },
+        })),
         ..Default::default()
     }, out_path)?;
     let barman_template = helm::template(BARMAN_CHART_NAME, BARMAN_CHART_VERSION, NAMESPACE, helm::TemplateOptions {
         release_name: BARMAN_CHART_NAME,
         set_values: HashMap::new(),
+        values: Some(serde_json::json!({
+            "resources": {
+                "requests": { "cpu": "20m", "memory": "64Mi" },
+                "limits":   { "cpu": "50m", "memory": "64Mi" },
+            },
+        })),
         ..Default::default()
     }, out_path)?;
 

@@ -3,6 +3,7 @@ mod cnpg;
 use std::collections::BTreeMap;
 
 use crate::cnpg::*;
+use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use kube::core::ObjectMeta;
 use kube_builder::prelude::*;
 use monitoring_crds::{self, pod_monitor::{PodMonitor, PodMonitorPodMetricsEndpoints, PodMonitorSelector, PodMonitorSpec}};
@@ -143,6 +144,17 @@ fn create_object_store() -> ObjectStore {
                          ..Default::default()
                      },
                 ]),
+                resources: Some(ObjectStoreInstanceSidecarConfigurationResources {
+                    requests: Some(BTreeMap::from([
+                        (String::from("cpu"), IntOrString::String(String::from("50m"))),
+                        (String::from("memory"), IntOrString::String(String::from("128Mi")))
+                    ])),
+                    limits: Some(BTreeMap::from([
+                        (String::from("cpu"), IntOrString::String(String::from("300m"))),
+                        (String::from("memory"), IntOrString::String(String::from("128Mi")))
+                    ])),
+                    ..Default::default()
+                }),
                 ..Default::default()
             }),
             configuration: ObjectStoreConfiguration {
@@ -272,6 +284,18 @@ fn create_database_cluster(is_restore: bool) -> Cluster {
 
             // Single-instance cluster — PDB would block node eviction during k8s upgrades
             enable_pdb: Some(false),
+
+            resources: Some(ClusterResources {
+                requests: Some(BTreeMap::from([
+                    (String::from("cpu"), IntOrString::String(String::from("100m"))),
+                    (String::from("memory"), IntOrString::String(String::from("256Mi")))
+                ])),
+                limits: Some(BTreeMap::from([
+                    (String::from("cpu"), IntOrString::String(String::from("300m"))),
+                    (String::from("memory"), IntOrString::String(String::from("256Mi")))
+                ])),
+                ..Default::default()
+            }),
 
             ..Default::default()
         },
