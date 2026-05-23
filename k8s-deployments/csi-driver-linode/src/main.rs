@@ -34,6 +34,9 @@ fn main() -> anyhow::Result<()> {
             } else {
                 let mut json = serde_json::to_value(value)?;
                 fix_env_value_conflicts(&mut json);
+                if json.get("kind").and_then(|k| k.as_str()) == Some("DaemonSet") {
+                    patch_node_plugin_resources(&mut json);
+                }
                 helm_resources.push(json);
             }
         }
@@ -46,6 +49,25 @@ fn main() -> anyhow::Result<()> {
     resources.push(helm_resources);
     println!("{}", serde_json::to_string(&resources)?);
     Ok(())
+}
+
+// Workaround for upstream chart bug: daemonset.yaml uses nindent 8 instead of nindent 10,
+// so csiLinodePlugin.resources renders with limits/requests as invalid top-level container
+// fields. Patch the DaemonSet directly after rendering instead.
+fn patch_node_plugin_resources(value: &mut serde_json::Value) {
+    if let Some(containers) = value
+        .pointer_mut("/spec/template/spec/containers")
+        .and_then(|v| v.as_array_mut())
+    {
+        for container in containers {
+            if container.get("name").and_then(|n| n.as_str()) == Some("csi-linode-plugin") {
+                container["resources"] = serde_json::json!({
+                    "requests": { "cpu": "15m", "memory": "64Mi" },
+                    "limits":   { "cpu": "50m", "memory": "64Mi" },
+                });
+            }
+        }
+    }
 }
 
 // The Helm chart generates env vars with both `value` and `valueFrom` set, which Kubernetes

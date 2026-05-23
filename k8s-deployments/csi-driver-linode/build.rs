@@ -1,10 +1,11 @@
 use std::env;
 use std::collections::HashMap;
+use serde_json::json;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
-const CHART_VERSION: &str = "v1.0.11";
+const CHART_VERSION: &str = "v1.1.3";
 const REPO_NAME: &str = "linode-csi";
 const REPO_URL: &str = "https://linode.github.io/linode-blockstorage-csi-driver/";
 const CHART_NAME: &str = "linode-blockstorage-csi-driver";
@@ -31,6 +32,41 @@ fn main() -> anyhow::Result<()> {
             ("secretRef.apiTokenRef", "token"),
             ("secretRef.regionRef", "region"),
         ]),
+        values: Some(json!({
+            // TODO: blocked by upstream chart bug — daemonset.yaml uses nindent 8 instead of
+            // nindent 10, so limits/requests render as invalid top-level container fields rather
+            // than under resources:. Uncomment once the chart is fixed.
+            // "csiLinodePlugin": {
+            //     "resources": {
+            //         "requests": { "cpu": "15m", "memory": "64Mi" },
+            //         "limits":   { "cpu": "50m", "memory": "64Mi" },
+            //     },
+            // },
+            "csiProvisioner": {
+                "resources": {
+                    "requests": { "cpu": "15m", "memory": "32Mi" },
+                    "limits":   { "cpu": "50m", "memory": "32Mi" },
+                },
+            },
+            "csiAttacher": {
+                "resources": {
+                    "requests": { "cpu": "10m", "memory": "32Mi" },
+                    "limits":   { "cpu": "50m", "memory": "32Mi" },
+                },
+            },
+            "csiResizer": {
+                "resources": {
+                    "requests": { "cpu": "10m", "memory": "32Mi" },
+                    "limits":   { "cpu": "50m", "memory": "32Mi" },
+                },
+            },
+            "csiNodeDriverRegistrar": {
+                "resources": {
+                    "requests": { "cpu": "10m", "memory": "32Mi" },
+                    "limits":   { "cpu": "50m", "memory": "32Mi" },
+                },
+            },
+        })),
         ..Default::default()
     }, out_path)?;
     write!(&mut file, "{}", template)?;
