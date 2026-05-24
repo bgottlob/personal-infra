@@ -55,6 +55,24 @@ fn create_agent() -> VMAgent {
                 ])),
                 ..Default::default()
             }),
+            containers: Some(vec![
+                BTreeMap::from([
+                    (String::from("name"), serde_json::json!("config-reloader")),
+                    (String::from("resources"), serde_json::json!({
+                        "requests": { "cpu": "10m", "memory": "32Mi" },
+                        "limits":   { "cpu": "50m", "memory": "32Mi" },
+                    })),
+                ]),
+            ]),
+            init_containers: Some(vec![
+                BTreeMap::from([
+                    (String::from("name"), serde_json::json!("config-init")),
+                    (String::from("resources"), serde_json::json!({
+                        "requests": { "cpu": "10m", "memory": "32Mi" },
+                        "limits":   { "cpu": "50m", "memory": "32Mi" },
+                    })),
+                ]),
+            ]),
             select_all_by_default: Some(true),
             replica_count: Some(1),
             scrape_interval: Some(String::from("30s")),
