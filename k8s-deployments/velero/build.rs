@@ -52,6 +52,19 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
                     "checksumAlgorithm": "",
                 },
             }],
+            "repositoryMaintenanceJob": {
+                "repositoryConfigData": {
+                    "global": {
+                        "podResources": {
+                            "cpuRequest": "20m",
+                            "cpuLimit": "100m",
+                            "memoryRequest": "128Mi",
+                            "memoryLimit": "512Mi",
+                        },
+                        "keepLatestMaintenanceJobs": 1,
+                    },
+                },
+            },
         },
         "initContainers": [{
             "name": "velero-plugin-for-aws",
@@ -60,6 +73,10 @@ fn values(access_key_id: String, secret_access_key: String) -> serde_json::Value
                 "mountPath": "/target",
                 "name": "plugins",
             }],
+            "resources": {
+                "requests": { "cpu": "10m", "memory": "32Mi" },
+                "limits":   { "cpu": "100m", "memory": "64Mi" },
+            },
         }],
         "resources": {
             "requests": {
