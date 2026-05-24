@@ -2,15 +2,15 @@
   description = "A basic flake with a shell";
 
   inputs = {
-    nixpkgs.url = "nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system: let
-      yokeVersion = "0.15.6";
-      kopiumVersion = "0.22.5";
+      yokeVersion = "0.20.14";
+      kopiumVersion = "0.23.0";
       overlays = [
         (import rust-overlay)
         (final: prev: {
@@ -20,10 +20,10 @@
              src = pkgs.fetchFromGitHub {
                owner = "yokecd";
                repo = "yoke";
-               tag = "yokecd/${yokeVersion}";
-               hash = "sha256-W8ouqrIB4RHStZ2Yhn+wzq4emMkhjA8Vi9Cc0p46Emo=";
+               tag = "v${yokeVersion}";
+               hash = "sha256-08cVWYKfNsMYqAtS4SqSkBWQ8uHEEjraf7NYlAjJnyc=";
              };
-	     vendorHash = "sha256-/4IINHW+T8vGBP166rdSLickki1Wh30/77K49hlwLM4=";
+	     vendorHash = "sha256-zQ/rLzhrN9TX8w+n62MfLPSXyCf37bS2y9IB4a7dyxg=";
 	     # Tests for this build a kind cluster, so skip that
 	     doCheck = false;
            };
@@ -38,7 +38,7 @@
                owner = "kube-rs";
                repo = "kopium";
                tag = "${kopiumVersion}";
-               hash = "sha256-zYmb+HxwEKEnzdqAzvki5M+NA2fGP174pRkU6B4WmZI=";
+               hash = "sha256-QEdUALde9BVRioUlu6Y/zz7tZ0/lLxcteWQD92x4kvI=";
            };
            cargoLock.lockFile = src + "/Cargo.lock";
            # todo - get tests working
@@ -83,6 +83,7 @@
             kubectl
             kubernetes-helm
             kubeseal
+            mermaid-cli
             openssl
             pkg-config
             postgresql
