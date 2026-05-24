@@ -24,7 +24,6 @@ fn main() -> anyhow::Result<()> {
 
 fn create_cluster_issuer() -> ClusterIssuer {
     let issuer_name = String::from("letsencrypt-prod");
-    let ingress_class = String::from("nginx");
 
     ClusterIssuer {
         metadata: ObjectMeta {
@@ -40,33 +39,23 @@ fn create_cluster_issuer() -> ClusterIssuer {
                     ..Default::default()
                 },
                 solvers: Some(vec![
-                  ClusterIssuerAcmeSolvers {
-                      http01: Some(ClusterIssuerAcmeSolversHttp01 {
-                          ingress: Some(ClusterIssuerAcmeSolversHttp01Ingress {
-                              class: Some(ingress_class),
-                              ..Default::default()
-                          }),
-                          ..Default::default()
-                      }),
-                      ..Default::default()
-                  },
-                  ClusterIssuerAcmeSolvers {
-                      http01: Some(ClusterIssuerAcmeSolversHttp01 {
-                          gateway_http_route: Some(ClusterIssuerAcmeSolversHttp01GatewayHttpRoute {
-                              parent_refs: Some(vec![
-                                   ClusterIssuerAcmeSolversHttp01GatewayHttpRouteParentRefs {
-                                       kind: Some(String::from("Gateway")),
-                                       name: String::from("envoy-public"),
-                                       namespace: Some(String::from("envoy-gateway-system")),
-                                       ..Default::default()
-                                   }
-                              ]),
-                              ..Default::default()
-                          }),
-                          ..Default::default()
-                      }),
-                      ..Default::default()
-                  }
+                    ClusterIssuerAcmeSolvers {
+                        http01: Some(ClusterIssuerAcmeSolversHttp01 {
+                            gateway_http_route: Some(ClusterIssuerAcmeSolversHttp01GatewayHttpRoute {
+                                parent_refs: Some(vec![
+                                    ClusterIssuerAcmeSolversHttp01GatewayHttpRouteParentRefs {
+                                        kind: Some(String::from("Gateway")),
+                                        name: String::from("envoy-public"),
+                                        namespace: Some(String::from("envoy-gateway-system")),
+                                        ..Default::default()
+                                    }
+                                ]),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }
                 ]),
                 ..Default::default()
             }),
