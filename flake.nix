@@ -51,6 +51,9 @@
       rust = pkgs.rust-bin.stable.latest.default.override {
         targets = [ "wasm32-wasip1" ];
       };
+      tofu = pkgs.writeShellScriptBin "tofu" ''
+        exec ${pkgs.opentofu}/bin/tofu -chdir="$TOFU_ROOT" "$@"
+      '';
       sops-seal = pkgs.rustPlatform.buildRustPackage {
         pname = "sops-seal";
         version = "0.1.0";
@@ -69,27 +72,27 @@
       {
         devShells.default = mkShell {
           packages = [
+            cargo-generate
             cargo-wasi
+            cmctl
+            egctl
             jsonnet
             jsonnet-bundler
             just
+            kopium
             kubectl
             kubernetes-helm
+            kubeseal
             openssl
-            opentofu
+            pkg-config
             postgresql
+            s3cmd
             sops
+            sops-seal
             tanka
+            tofu
             velero
             yoke
-            pkg-config
-            kopium
-            cargo-generate
-            s3cmd
-            egctl
-            cmctl
-            kubeseal
-            sops-seal
           ];
           nativeBuildInputs = [rust];
         };
