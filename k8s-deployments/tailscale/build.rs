@@ -41,6 +41,9 @@ fn main() -> anyhow::Result<()> {
                     "limits":   { "cpu": "100m", "memory": "128Mi" },
                 },
             },
+            "proxyConfig": {
+                "defaultProxyClass": "default",
+            },
         })),
         ..Default::default()
     }, out_path)?;
