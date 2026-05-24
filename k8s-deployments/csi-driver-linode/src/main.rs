@@ -34,8 +34,10 @@ fn main() -> anyhow::Result<()> {
             } else {
                 let mut json = serde_json::to_value(value)?;
                 fix_env_value_conflicts(&mut json);
-                if json.get("kind").and_then(|k| k.as_str()) == Some("DaemonSet") {
-                    patch_node_plugin_resources(&mut json);
+                match json.get("kind").and_then(|k| k.as_str()) {
+                    Some("DaemonSet") => patch_daemonset_resources(&mut json),
+                    Some("StatefulSet") => patch_controller_resources(&mut json),
+                    _ => {}
                 }
                 helm_resources.push(json);
             }
@@ -51,20 +53,54 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-// Workaround for upstream chart bug: daemonset.yaml uses nindent 8 instead of nindent 10,
-// so csiLinodePlugin.resources renders with limits/requests as invalid top-level container
-// fields. Patch the DaemonSet directly after rendering instead.
-fn patch_node_plugin_resources(value: &mut serde_json::Value) {
+// Patch container resources after Helm rendering due to limitations in chart
+fn patch_daemonset_resources(value: &mut serde_json::Value) {
+    let resources: &[(&str, serde_json::Value)] = &[
+        ("csi-node-driver-registrar", serde_json::json!({
+            "requests": { "cpu": "10m", "memory": "32Mi" },
+            "limits":   { "cpu": "50m", "memory": "32Mi" },
+        })),
+        ("csi-linode-plugin", serde_json::json!({
+            "requests": { "cpu": "15m", "memory": "64Mi" },
+            "limits":   { "cpu": "50m", "memory": "64Mi" },
+        })),
+    ];
+    patch_container_resources(value, resources);
+}
+
+// Patch container resources after Helm rendering due to limitations in chart
+fn patch_controller_resources(value: &mut serde_json::Value) {
+    let resources: &[(&str, serde_json::Value)] = &[
+        ("csi-provisioner", serde_json::json!({
+            "requests": { "cpu": "15m", "memory": "32Mi" },
+            "limits":   { "cpu": "50m", "memory": "32Mi" },
+        })),
+        ("csi-attacher", serde_json::json!({
+            "requests": { "cpu": "10m", "memory": "32Mi" },
+            "limits":   { "cpu": "50m", "memory": "32Mi" },
+        })),
+        ("csi-resizer", serde_json::json!({
+            "requests": { "cpu": "10m", "memory": "32Mi" },
+            "limits":   { "cpu": "50m", "memory": "32Mi" },
+        })),
+        ("csi-linode-plugin", serde_json::json!({
+            "requests": { "cpu": "15m", "memory": "64Mi" },
+            "limits":   { "cpu": "50m", "memory": "64Mi" },
+        })),
+    ];
+    patch_container_resources(value, resources);
+}
+
+fn patch_container_resources(value: &mut serde_json::Value, resources: &[(&str, serde_json::Value)]) {
     if let Some(containers) = value
         .pointer_mut("/spec/template/spec/containers")
         .and_then(|v| v.as_array_mut())
     {
         for container in containers {
-            if container.get("name").and_then(|n| n.as_str()) == Some("csi-linode-plugin") {
-                container["resources"] = serde_json::json!({
-                    "requests": { "cpu": "15m", "memory": "64Mi" },
-                    "limits":   { "cpu": "50m", "memory": "64Mi" },
-                });
+            if let Some(name) = container.get("name").and_then(|n| n.as_str()) {
+                if let Some((_, res)) = resources.iter().find(|(n, _)| *n == name) {
+                    container["resources"] = res.clone();
+                }
             }
         }
     }
