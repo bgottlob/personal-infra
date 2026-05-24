@@ -1,4 +1,3 @@
-use k8s_gateway_api::prelude::HTTPRoute;
 use kube_builder::prelude::*;
 use sealed_secrets_crd::sealed_secrets::SealedSecret;
 use serde::{Deserialize, Serialize};
@@ -80,12 +79,28 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
+fn create_redirect_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
+        .name(format!("{}-http-redirect", NAME))
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
+        .https_redirect_rule()
+        .build()
+}
+
 fn create_route() -> anyhow::Result<HTTPRoute> {
     HTTPRouteBuilder::new()
         .name(NAME)
-        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .listener_set_parent_ref(NAME, format!("{}-https", NAME))
         .hostname(HOSTNAME)
         .service_port_backend_rule(NAME, 80)
+        .build()
+}
+
+fn create_listener_set() -> anyhow::Result<ListenerSet> {
+    ListenerSetBuilder::new()
+        .name(NAME)
+        .hostname(HOSTNAME)
         .build()
 }
 
@@ -108,7 +123,9 @@ fn read_sealed_secrets_from_stdin() -> anyhow::Result<Vec<serde_json::Value>> {
 fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let service = create_service()?;
+    let redirect_route = create_redirect_route()?;
     let route = create_route()?;
+    let listener_set = create_listener_set()?;
     let sealed_secrets = read_sealed_secrets_from_stdin()?;
 
     let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
@@ -116,7 +133,9 @@ fn main() -> anyhow::Result<()> {
     resources.push(vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
+        serde_json::value::to_value(redirect_route)?,
         serde_json::value::to_value(route)?,
+        serde_json::value::to_value(listener_set)?,
     ]);
 
     println!("{}", serde_json::to_string(&resources).unwrap());

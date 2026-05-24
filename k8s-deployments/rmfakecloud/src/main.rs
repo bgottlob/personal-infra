@@ -1,4 +1,3 @@
-use k8s_gateway_api::prelude::HTTPRoute;
 use kube_builder::prelude::*;
 
 use std::collections::BTreeMap;
@@ -62,11 +61,27 @@ fn create_service() -> anyhow::Result<Service> {
         .build()
 }
 
+fn create_redirect_route() -> anyhow::Result<HTTPRoute> {
+    HTTPRouteBuilder::new()
+        .name(format!("{}-http-redirect", NAME))
+        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
+        .https_redirect_rule()
+        .build()
+}
+
 fn create_route() -> anyhow::Result<HTTPRoute> {
     HTTPRouteBuilder::new()
         .name(NAME)
+        .listener_set_parent_ref(NAME, format!("{}-https", NAME))
         .service_port_backend_rule(NAME, 80)
-        .gateway_parent_ref("envoy-gateway-system", "envoy-public")
+        .hostname(HOSTNAME)
+        .build()
+}
+
+fn create_listener_set() -> anyhow::Result<ListenerSet> {
+    ListenerSetBuilder::new()
+        .name(NAME)
         .hostname(HOSTNAME)
         .build()
 }
@@ -82,13 +97,17 @@ fn create_pvc() -> anyhow::Result<PersistentVolumeClaim> {
 fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let service = create_service()?;
+    let redirect_route = create_redirect_route()?;
     let route = create_route()?;
+    let listener_set = create_listener_set()?;
     let pvc = create_pvc()?;
 
     let resources = vec![
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
+        serde_json::value::to_value(redirect_route)?,
         serde_json::value::to_value(route)?,
+        serde_json::value::to_value(listener_set)?,
         serde_json::value::to_value(pvc)?,
     ];
     println!("{}", serde_json::to_string(&resources).unwrap());

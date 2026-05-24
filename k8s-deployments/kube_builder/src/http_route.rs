@@ -36,8 +36,46 @@ impl HTTPRouteBuilder {
         self
     }
 
+    // Adds a parentRef targeting a specific listener on a ListenerSet, identified
+    // by its section name. Required for HTTPS routes when the listener lives on a
+    // ListenerSet rather than directly on the Gateway.
+    pub fn listener_set_parent_ref<N: Into<String>, S: Into<String>>(&mut self, name: N, section_name: S) -> &mut Self {
+        let parent_ref = HttpRouteParentRefs {
+            name: name.into(),
+            kind: Some(String::from("ListenerSet")),
+            group: Some(String::from("gateway.networking.k8s.io")),
+            section_name: Some(section_name.into()),
+            ..Default::default()
+        };
+        self.parent_refs.push(parent_ref);
+        self
+    }
+
     pub fn parent_ref(&mut self, parent_ref: HttpRouteParentRefs) -> &mut Self {
         self.parent_refs.push(parent_ref);
+        self
+    }
+
+    pub fn https_redirect_rule(&mut self) -> &mut Self {
+        let rule = HttpRouteRules {
+            filters: Some(vec![HttpRouteRulesFilters {
+                r#type: HttpRouteRulesFiltersType::RequestRedirect,
+                request_redirect: Some(HttpRouteRulesFiltersRequestRedirect {
+                    scheme: Some(HttpRouteRulesFiltersRequestRedirectScheme::Https),
+                    status_code: Some(301),
+                    ..Default::default()
+                }),
+                cors: None,
+                extension_ref: None,
+                external_auth: None,
+                request_header_modifier: None,
+                request_mirror: None,
+                response_header_modifier: None,
+                url_rewrite: None,
+            }]),
+            ..Default::default()
+        };
+        self.rules.push(rule);
         self
     }
 

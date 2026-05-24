@@ -48,65 +48,27 @@ fn create_envoy_proxy() -> EnvoyProxy {
 }
 
 fn create_gateway() -> Gateway {
-    let mut listeners: Vec<GatewayListeners> = [
-        ("blog", "bgottlob.com"),
-        ("grafana", "grafana.bgottlob.com"),
-        ("kavita", "library.bgottlob.com"),
-        ("miniflux", "miniflux.bgottlob.com"),
-        ("registry", "registry.bgottlob.com"),
-        ("rmfakecloud", "remarkable.bgottlob.com"),
-        ("wallabag", "wallabag.bgottlob.com"),
-    ]
-        .iter()
-        .map(|(name, hostname)| {
-            GatewayListeners {
-                allowed_routes: Some(GatewayListenersAllowedRoutes {
-                    namespaces: Some(GatewayListenersAllowedRoutesNamespaces {
-                        from: Some(GatewayListenersAllowedRoutesNamespacesFrom::All),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                }),
-                name: format!("{}-https", name),
-                protocol: String::from("HTTPS"),
-                port: 443,
-                hostname: Some(hostname.to_string()),
-                tls: Some(GatewayListenersTls {
-                    mode: Some(GatewayListenersTlsMode::Terminate),
-                    certificate_refs: Some(
-                        vec![GatewayListenersTlsCertificateRefs {
-                            kind: Some(String::from("Secret")),
-                            name: format!("{}-https", name),
-                            ..Default::default()
-                        }]
-                    ),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }
-        })
-    .collect();
-
-    listeners.push(
-        GatewayListeners {
-            name: String::from("http"),
-            protocol: String::from("HTTP"),
-            port: 80,
-            ..Default::default()
-        },
-    );
-
     Gateway {
         metadata: ObjectMeta {
-            annotations: Some(BTreeMap::from([
-                (String::from("cert-manager.io/cluster-issuer"), String::from("letsencrypt-prod")),
-            ])),
             name: Some(GATEWAY_CLASS.to_string()),
             ..Default::default()
         },
         spec: GatewaySpec {
             gateway_class_name: GATEWAY_CLASS.to_string(),
-            listeners,
+            listeners: vec![
+                GatewayListeners {
+                    name: String::from("http"),
+                    protocol: String::from("HTTP"),
+                    port: 80,
+                    ..Default::default()
+                },
+            ],
+            allowed_listeners: Some(GatewayAllowedListeners {
+                namespaces: Some(GatewayAllowedListenersNamespaces {
+                    from: Some(GatewayAllowedListenersNamespacesFrom::All),
+                    ..Default::default()
+                }),
+            }),
             infrastructure: Some(GatewayInfrastructure {
                 parameters_ref: Some(GatewayInfrastructureParametersRef {
                     group: String::from("gateway.envoyproxy.io"),
