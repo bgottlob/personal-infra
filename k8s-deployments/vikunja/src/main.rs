@@ -5,6 +5,7 @@ use k8s_openapi::{
     api::{
         apps::v1::Deployment,
         core::v1::{PersistentVolumeClaim, Service, VolumeMount},
+        networking::v1::Ingress,
     },
     apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString},
 };
@@ -72,7 +73,13 @@ fn create_service() -> anyhow::Result<Service> {
         .name(NAME)
         .selector(labels())
         .port("http", PortProtocol::TCP, 80, PORT)
-        .expose_to_tailnet(Some(NAME))
+        .build()
+}
+
+fn create_ingress() -> anyhow::Result<Ingress> {
+    IngressBuilder::new()
+        .name(NAME)
+        .expose_to_tailnet(NAME, NAME, 80)
         .build()
 }
 
@@ -81,6 +88,7 @@ fn main() -> anyhow::Result<()> {
     let deploy = create_deploy()?;
     let pvc = create_pvc()?;
     let service = create_service()?;
+    let ingress = create_ingress()?;
 
     let mut resources: Vec<Vec<serde_json::Value>> = Vec::new();
     if !sealed_secrets.is_empty() {
@@ -90,6 +98,7 @@ fn main() -> anyhow::Result<()> {
         serde_json::value::to_value(deploy)?,
         serde_json::value::to_value(service)?,
         serde_json::value::to_value(pvc)?,
+        serde_json::value::to_value(ingress)?,
     ]);
     println!("{}", serde_json::to_string(&resources)?);
     Ok(())

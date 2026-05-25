@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::api::core::v1::{ConfigMapVolumeSource, KeyToPath, PersistentVolumeClaimVolumeSource, PodSpec, PodTemplateSpec, Volume};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::LabelSelector;
-use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}}; use kube::core::ObjectMeta;
+use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMap, HTTPGetAction, PersistentVolumeClaim, PodSecurityContext, Probe, Service, TCPSocketAction, VolumeMount}, networking::v1::Ingress}, apimachinery::pkg::{api::resource::Quantity, util::intstr::IntOrString}}; use kube::core::ObjectMeta;
 use kube_builder::prelude::*;
 use serde_json::json;
 
@@ -126,7 +126,13 @@ fn create_service() -> anyhow::Result<Service> {
         .name(NAME)
         .port(CONTAINER_PORT_NAME, PortProtocol::TCP, 80, PORT)
         .selector(labels())
-        .expose_to_tailnet(Some(NAME))
+        .build()
+}
+
+fn create_ingress() -> anyhow::Result<Ingress> {
+    IngressBuilder::new()
+        .name(NAME)
+        .expose_to_tailnet(NAME, NAME, 80)
         .build()
 }
 
@@ -175,11 +181,13 @@ fn main() -> anyhow::Result<()> {
     let svc = create_service()?;
     let sts = create_statefulset()?;
     let cm = create_configmap()?;
+    let ingress = create_ingress()?;
 
     resources.push(serde_json::to_value(&pvc)?);
     resources.push(serde_json::to_value(&svc)?);
     resources.push(serde_json::to_value(&sts)?);
     resources.push(serde_json::to_value(&cm)?);
+    resources.push(serde_json::to_value(&ingress)?);
 
     println!("{}", serde_json::to_string(&resources)?);
 

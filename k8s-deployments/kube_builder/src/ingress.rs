@@ -94,6 +94,54 @@ impl IngressBuilder {
         self
     }
 
+    // Sets ingressClassName to "tailscale", adds a TLS entry with the given
+    // hostname (Tailscale manages the cert secret itself), and adds a
+    // catch-all path rule routing to the given service. The hostname becomes
+    // the first DNS label of the MagicDNS name (<hostname>.<tailnet>.ts.net).
+    pub fn expose_to_tailnet<H: Into<String>, S: Into<String>>(
+        &mut self,
+        hostname: H,
+        service_name: S,
+        service_port: i32,
+    ) -> &mut Self {
+        self.ingress_class_name = Some("tailscale".to_string());
+        self.tls_hosts.push(IngressTLS {
+            hosts: Some(vec![hostname.into()]),
+            secret_name: None,
+        });
+        self.path_rule("/", "Prefix", service_name, service_port)
+    }
+
+    pub fn path_rule<P: Into<String>, T: Into<String>, N: Into<String>>(
+        &mut self,
+        path: P,
+        path_type: T,
+        service_name: N,
+        service_port: i32,
+    ) -> &mut Self {
+        let rule = IngressRule {
+            host: None,
+            http: Some(HTTPIngressRuleValue {
+                paths: vec![HTTPIngressPath {
+                    path_type: path_type.into(),
+                    path: Some(path.into()),
+                    backend: IngressBackend {
+                        service: Some(IngressServiceBackend {
+                            name: service_name.into(),
+                            port: Some(ServiceBackendPort {
+                                number: Some(service_port),
+                                ..Default::default()
+                            }),
+                        }),
+                        ..Default::default()
+                    },
+                }],
+            }),
+        };
+        self.rules.push(rule);
+        self
+    }
+
     pub fn build(&self) -> anyhow::Result<Ingress> {
         let name = self.name.clone().ok_or(anyhow!("The ingress must have a name"))?;
         let ingress_class_name = self.ingress_class_name.clone().ok_or(anyhow!("The ingress must have an ingress class name set"))?;
