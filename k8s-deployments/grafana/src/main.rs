@@ -48,7 +48,7 @@ fn create_statefulset() -> anyhow::Result<StatefulSet> {
         .cpu_request(Quantity(String::from("250m")))
         .cpu_limit(Quantity(String::from("500m")))
         .memory_request(Quantity(String::from("256Mi"))) // recommended is 750Mi
-        .memory_limit(Quantity(String::from("256Mi")))
+        .memory_limit(Quantity(String::from("1Gi")))
         .volume_mount(VolumeMount {
             mount_path: String::from("/var/lib/grafana"),
             name: String::from("grafana"),
