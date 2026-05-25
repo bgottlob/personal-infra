@@ -27,16 +27,16 @@ fn labels() -> BTreeMap<String, String> {
 fn create_deploy() -> anyhow::Result<Deployment> {
     let probe = http_probe("/api/health", IntOrString::String(String::from("app")), None, None, None, None);
 
-    let memory = Quantity(String::from("300Mi"));
     let container = ContainerBuilder::new()
         .name(NAME)
         .image(format!("{}:{}", IMAGE, VERSION))
         .container_port(PORT, "app", PortProtocol::TCP)
         .env("TZ", "America/New_York")
         .readiness_probe(probe)
-        .cpu_request(Quantity(String::from("25m")))
-        .memory_request(memory.clone())
-        .memory_limit(memory)
+        .cpu_request(Quantity(String::from("150m")))
+        .cpu_limit(Quantity(String::from("1000m")))
+        .memory_request(Quantity(String::from("300Mi")))
+        .memory_limit(Quantity(String::from("1Gi")))
         .volume_mount(
             VolumeMount {
                 name: String::from("library"),
