@@ -9,6 +9,7 @@ pub struct DeploymentBuilder {
     replicas: Option<i32>,
     selector_match_labels: BTreeMap<String, String>,
     pod_labels: BTreeMap<String, String>,
+    pod_annotations: BTreeMap<String, String>,
     containers: Vec<Container>,
     volumes: Vec<Volume>,
     service_account_name: Option<String>,
@@ -47,6 +48,11 @@ impl DeploymentBuilder {
 
     pub fn pod_labels(&mut self, mut labels: BTreeMap<String, String>) -> &mut Self {
         self.pod_labels.append(&mut labels);
+        self
+    }
+
+    pub fn pod_annotation<S: Into<String>, T: Into<String>>(&mut self, key: S, value: T) -> &mut Self {
+        self.pod_annotations.insert(key.into(), value.into());
         self
     }
 
@@ -211,6 +217,11 @@ impl DeploymentBuilder {
                 template: PodTemplateSpec {
                     metadata: Some(ObjectMeta {
                         labels: Some(self.pod_labels.clone()),
+                        annotations: if self.pod_annotations.is_empty() {
+                            None
+                        } else {
+                            Some(self.pod_annotations.clone())
+                        },
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {

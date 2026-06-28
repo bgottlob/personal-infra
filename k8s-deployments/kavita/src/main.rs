@@ -60,6 +60,7 @@ fn create_deploy() -> anyhow::Result<Deployment> {
         .replicas(1)
         .selector_match_labels(labels())
         .pod_labels(labels())
+        .pod_annotation("backup.velero.io/backup-volumes-excludes", "library")
         .container(container)
         .volume_from_pvc("library", LIBRARY_PVC_NAME)
         .volume_from_pvc("config", CONFIG_PVC_NAME)
