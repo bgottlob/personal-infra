@@ -9,7 +9,7 @@ use k8s_openapi::{api::{
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 
 const NAME: &str = "kavita";
-const VERSION: &str = "0.8.8";
+const VERSION: &str = "0.9.0.2";
 const IMAGE: &str = "jvmilazz0/kavita";
 const PORT: i32 = 5000;
 const HOSTNAME: &str = "library.bgottlob.com";
