@@ -109,7 +109,8 @@ fn create_gateway_class() -> GatewayClass {
 }
 
 // Proxy Protocol v2: NodeBalancer sends real client IP via proxy protocol headers;
-// this policy tells Envoy to parse them.
+// this policy tells Envoy to parse them. optional: true allows connections without
+// PP2 headers (e.g. in-cluster image pulls that bypass the NodeBalancer via kube-proxy).
 fn create_client_traffic_policy() -> serde_json::Value {
     serde_json::json!({
         "apiVersion": "gateway.envoyproxy.io/v1alpha1",
@@ -119,7 +120,9 @@ fn create_client_traffic_policy() -> serde_json::Value {
             "namespace": "envoy-gateway-system"
         },
         "spec": {
-            "enableProxyProtocol": true,
+            "proxyProtocol": {
+                "optional": true
+            },
             "targetRef": {
                 "group": "gateway.networking.k8s.io",
                 "kind": "Gateway",
