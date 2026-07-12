@@ -1,0 +1,6 @@
+name          := "umami"
+wasm_name     := name
+deployment_dir := source_directory()
+default_flags := "-namespace umami -create-namespace"
+
+import '../shared_yoke.just'

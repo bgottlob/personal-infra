@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSecurityContext, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, EmptyDirVolumeSource, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSecurityContext, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta}};
 
 #[derive(Default)]
 pub struct DeploymentBuilder {
@@ -11,6 +11,7 @@ pub struct DeploymentBuilder {
     pod_labels: BTreeMap<String, String>,
     pod_annotations: BTreeMap<String, String>,
     containers: Vec<Container>,
+    init_containers: Vec<Container>,
     volumes: Vec<Volume>,
     service_account_name: Option<String>,
     private_registry_pull_secret: bool,
@@ -58,6 +59,21 @@ impl DeploymentBuilder {
 
     pub fn container(&mut self, container: Container) -> &mut Self {
         self.containers.push(container);
+        self
+    }
+
+    pub fn init_container(&mut self, container: Container) -> &mut Self {
+        self.init_containers.push(container);
+        self
+    }
+
+    pub fn volume_from_empty_dir<N: Into<String>>(&mut self, name: N) -> &mut Self {
+        let volume = Volume {
+            name: name.into(),
+            empty_dir: Some(EmptyDirVolumeSource::default()),
+            ..Default::default()
+        };
+        self.volumes.push(volume);
         self
     }
 
@@ -195,6 +211,11 @@ impl DeploymentBuilder {
             false => Some(self.volumes.clone()),
         };
 
+        let init_containers = match self.init_containers.is_empty() {
+            true => None,
+            false => Some(self.init_containers.clone()),
+        };
+
         let image_pull_secrets = if self.private_registry_pull_secret {
             Some(vec![LocalObjectReference {
                 name: "registry-creds".into()
@@ -228,6 +249,7 @@ impl DeploymentBuilder {
                         automount_service_account_token: self.automount_service_account_token,
                         security_context: self.security_context.clone(),
                         containers: containers,
+                        init_containers,
                         volumes,
                         service_account_name: self.service_account_name.clone(),
                         image_pull_secrets,

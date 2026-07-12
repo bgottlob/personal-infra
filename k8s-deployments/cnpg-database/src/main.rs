@@ -58,6 +58,10 @@ fn main() -> anyhow::Result<()> {
         other.push(serde_json::to_value(create_database(
             String::from("miniflux"), String::from(APP_USER_USERNAME),
         ))?);
+
+        other.push(serde_json::to_value(create_database(
+            String::from("umami"), String::from(APP_USER_USERNAME),
+        ))?);
     }
 
     resources.push(other);

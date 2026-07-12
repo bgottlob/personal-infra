@@ -10,6 +10,7 @@ pub struct ContainerBuilder {
     resources: Option<ResourceRequirements>,
     container_ports: Vec<ContainerPort>,
     env: Vec<EnvVar>,
+    command: Vec<String>,
     args: Vec<String>,
     liveness_probe: Option<Probe>,
     readiness_probe: Option<Probe>,
@@ -142,6 +143,12 @@ impl ContainerBuilder {
         self
     }
 
+    pub fn command<V: Into<Vec<String>>>(&mut self, command: V) -> &mut Self {
+        let command: Vec<String> = command.into();
+        self.command.append(&mut command.clone());
+        self
+    }
+
     pub fn arg<S: Into<String>>(&mut self, arg: S) -> &mut Self {
         self.args.push(arg.into());
         self
@@ -186,6 +193,11 @@ impl ContainerBuilder {
             false => Some(self.env.clone()),
         };
 
+        let command = match self.command.is_empty() {
+            true => None,
+            false => Some(self.command.clone()),
+        };
+
         let args = match self.args.is_empty() {
             true => None,
             false => Some(self.args.clone()),
@@ -197,6 +209,7 @@ impl ContainerBuilder {
         };
 
         let container = Container {
+            command,
             args,
             name,
             env,

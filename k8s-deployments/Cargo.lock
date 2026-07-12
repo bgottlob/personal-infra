@@ -853,6 +853,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "umami"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "k8s-openapi",
+ "kube-builder",
+ "serde_json",
+]
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"

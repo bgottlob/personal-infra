@@ -37,6 +37,17 @@ fn create_envoy_proxy() -> EnvoyProxy {
                         }),
                         ..Default::default()
                     }),
+                    // Proxy Protocol v2 makes the Linode NodeBalancer forward the real client IP
+                    // instead of its own internal address, which is required for geo lookups.
+                    envoy_service: Some(EnvoyProxyProviderKubernetesEnvoyService {
+                        annotations: Some(BTreeMap::from([
+                            (
+                                String::from("service.beta.kubernetes.io/linode-loadbalancer-proxy-protocol"),
+                                String::from("v2"),
+                            ),
+                        ])),
+                        ..Default::default()
+                    }),
                     ..Default::default()
                 }),
                 host: None,
@@ -97,6 +108,27 @@ fn create_gateway_class() -> GatewayClass {
     }
 }
 
+// Proxy Protocol v2: NodeBalancer sends real client IP via proxy protocol headers;
+// this policy tells Envoy to parse them.
+fn create_client_traffic_policy() -> serde_json::Value {
+    serde_json::json!({
+        "apiVersion": "gateway.envoyproxy.io/v1alpha1",
+        "kind": "ClientTrafficPolicy",
+        "metadata": {
+            "name": "proxy-protocol",
+            "namespace": "envoy-gateway-system"
+        },
+        "spec": {
+            "enableProxyProtocol": true,
+            "targetRef": {
+                "group": "gateway.networking.k8s.io",
+                "kind": "Gateway",
+                "name": GATEWAY_CLASS
+            }
+        }
+    })
+}
+
 fn main() -> anyhow::Result<()> {
     let mut resources: Vec<serde_json::Value> = Vec::new();
 
@@ -122,6 +154,7 @@ fn main() -> anyhow::Result<()> {
     resources.push(serde_json::to_value(&gateway)?);
     let proxy = create_envoy_proxy();
     resources.push(serde_json::to_value(&proxy)?);
+    resources.push(create_client_traffic_policy());
 
     println!("{}", serde_json::to_string(&resources).unwrap());
     Ok(())
