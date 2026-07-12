@@ -58,6 +58,7 @@ fn create_deploy() -> anyhow::Result<Deployment> {
     DeploymentBuilder::new()
         .name(NAME)
         .replicas(1)
+        .recreate_strategy()
         .selector_match_labels(labels())
         .pod_labels(labels())
         .pod_annotation("backup.velero.io/backup-volumes-excludes", "library")

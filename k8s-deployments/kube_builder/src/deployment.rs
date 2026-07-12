@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use anyhow::anyhow;
 
-use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec}, core::v1::{ConfigMapVolumeSource, Container, EmptyDirVolumeSource, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSecurityContext, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta}};
+use k8s_openapi::{api::{apps::v1::{Deployment, DeploymentSpec, DeploymentStrategy}, core::v1::{ConfigMapVolumeSource, Container, EmptyDirVolumeSource, EnvVar, EnvVarSource, KeyToPath, LocalObjectReference, ObjectFieldSelector, PersistentVolumeClaimVolumeSource, PodSecurityContext, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume}}, apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta}};
 
 #[derive(Default)]
 pub struct DeploymentBuilder {
@@ -17,6 +17,7 @@ pub struct DeploymentBuilder {
     private_registry_pull_secret: bool,
     security_context: Option<PodSecurityContext>,
     automount_service_account_token: Option<bool>,
+    strategy: Option<DeploymentStrategy>,
 }
 
 impl DeploymentBuilder {
@@ -198,6 +199,14 @@ impl DeploymentBuilder {
         self
     }
 
+    pub fn recreate_strategy(&mut self) -> &mut Self {
+        self.strategy = Some(DeploymentStrategy {
+            type_: Some("Recreate".to_string()),
+            ..Default::default()
+        });
+        self
+    }
+
     pub fn build(&self) -> anyhow::Result<Deployment> {
         let name = self.name.clone().ok_or(anyhow!("Deployment must have a name"))?;
 
@@ -235,6 +244,7 @@ impl DeploymentBuilder {
                     ..Default::default()
                 },
                 replicas: Some(self.replicas.unwrap_or(1)),
+                strategy: self.strategy.clone(),
                 template: PodTemplateSpec {
                     metadata: Some(ObjectMeta {
                         labels: Some(self.pod_labels.clone()),
